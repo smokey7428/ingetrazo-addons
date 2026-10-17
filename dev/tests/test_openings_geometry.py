@@ -40,6 +40,10 @@ def close(got, want, message: str, tol: float = 1e-6) -> None:
           f"{message}: got {got!r}, want {want!r} (tol {tol})")
 
 
+def equal(got, want, message: str) -> None:
+    check(got == want, f"{message}: got {got!r}, want {want!r}")
+
+
 def load(name: str):
     """Import a module of the extension by path, the way IngeTrazo would.
 
@@ -253,7 +257,8 @@ def test_symbol() -> None:
     depth = 0.30
     p = params_mod.normalize({"handing": "left", "swing": "in",
                               "open_angle": 90.0, "symbol_z": 0.0})
-    pivot, _t, _y = geometry.hinge_and_leaf(p, depth)
+    pivot, _y0, _t, _y1 = geometry.hinge_and_panel(
+        p, params_mod.frame_depth(p, depth))
     clear_w, _h, _jamb, _head = geometry.frame_opening(p)
 
     segments = geometry.swing_symbol(p, depth)
@@ -290,16 +295,18 @@ def test_symbol() -> None:
 def test_params() -> None:
     """Normalising is tolerant; validating is honest."""
     p = params_mod.normalize(None)
-    check(set(p) == set(params_mod.DEFAULTS),
+    check(set(p) == set(params_mod.defaults()),
           "a fresh door carries every parameter")
-    close(p["width"], 0.90, "and the default width")
+    close(p["width"], 1.064, "and the default width — a 930 leaf in a 67 mm "
+                             "frame")
 
     # Rubbish falls back rather than raising — a door that cannot be rebuilt
     # because one number went bad is worse than a door at 90 degrees.
     messy = params_mod.normalize({"width": "wide", "handing": "sideways",
                                   "swing": 7, "leaf_t": float("nan"),
                                   "open_angle": 900.0, "symbol": "yes"})
-    close(messy["width"], 0.90, "an unreadable width falls back")
+    close(messy["width"], 1.064, "an unreadable width falls back to the "
+                                 "catalogue's")
     check(messy["handing"] == "left", "an unknown handing falls back")
     check(messy["swing"] == "in", "and an unknown swing")
     close(messy["leaf_t"], 0.042, "a NaN thickness falls back")
@@ -309,7 +316,7 @@ def test_params() -> None:
     # Out-of-range numbers are clamped, not refused.
     clamped = params_mod.normalize({"width": 99.0, "threshold": -5.0,
                                     "handle": 40.0})
-    close(clamped["width"], 4.0, "an absurd width clamps to the limit")
+    close(clamped["width"], 6.0, "an absurd width clamps to the limit")
     close(clamped["threshold"], 0.0, "a negative threshold clamps to none")
     close(clamped["handle"], 2.5, "an absurd handle height clamps")
 
@@ -332,9 +339,125 @@ def test_params() -> None:
     check("mm" in params_mod.describe(p), "the description carries the size")
 
 
+def test_window() -> None:
+    """The Dutch standards, and that a window is the same machinery.
+
+    The numbers are the ones a wooden window is actually made of: kozijnhout
+    67 × 144 mm for the frame, raamhout 54 × 67 mm for a sash that opens, and
+    20 mm glazing in both. If any of these drift, the frames a carpenter gets
+    do not fit the hole the wall was cut for.
+    """
+    fixed = params_mod.normalize({"kind": "window"})
+    equal(fixed["type"], "fixed", "a fresh window is a fixed one")
+    close(fixed["width"], 1.000, "a 1000 mm wide frame")
+    close(fixed["height"], 1.500, "1500 mm high")
+    close(fixed["sill"], 0.900, "standing on a 900 mm sill")
+    close(fixed["frame_w"], 0.067, "kozijnhout 67 mm wide")
+    close(fixed["frame_h"], 0.067, "the head is the same section")
+    close(fixed["frame_b"], 0.067, "and so is the bottom member")
+    close(fixed["frame_depth"], 0.144, "and 144 mm deep")
+    close(fixed["glass_t"], 0.020, "with 20 mm glass")
+    check(not params_mod.moves(fixed), "a vast raam does not open")
+    check(fixed["symbol"] is False, "so it has no swing symbol")
+
+    swing = params_mod.normalize({"kind": "window", "type": "swing"})
+    close(swing["sash_w"], 0.054, "raamhout is 54 mm wide")
+    close(swing["sash_d"], 0.067, "and 67 mm deep")
+    close(swing["glass_t"], 0.020, "with the same 20 mm glass")
+    close(swing["frame_w"], 0.067, "inside the same kozijn")
+    check(params_mod.moves(swing), "a draairaam opens")
+    check(swing["symbol"] is True, "so it has a swing symbol")
+    close(swing["open_angle"], 90.0, "standing open at 90 degrees")
+    check("Draairaam" in profiles_mod.label("window", "swing"),
+          "and it is named the way the Dutch name it")
+    check(profiles_mod.label("door", "hinged").startswith("Stompe deur"),
+          "as is the door")
+
+    # A door is untouched by any of this: its own sections, its own sizes.
+    door = params_mod.normalize({})
+    close(door["frame_w"], 0.067, "the door frame section")
+    close(door["frame_b"], 0.0, "a door has no bottom member")
+    close(door["frame_depth"], 0.0, "and its lining follows the wall")
+    close(door["width"], 1.064, "a 930 leaf in a 67 mm frame")
+    check(door["glass_t"] == 0.0, "a door is not glazed by default")
+
+    # The frame is as deep as its section, not as deep as the wall — which is
+    # the one thing that really differs from a door lining.
+    depth = 0.30
+    built = geometry.parts(fixed, depth)
+    check(set(built) == {"Frame", "Glass"},
+          f"a fixed window is a frame and its glass: {sorted(built)}")
+    for name, faces in built.items():
+        check_closed(name, faces)
+        check_outward(name, faces)
+    clear_w, clear_h, _jamb, bottom = geometry.frame_opening(fixed)
+    close(clear_w, 1.000 - 2 * 0.067, "the clear width")
+    close(clear_h, 1.500 - 2 * 0.067, "the clear height, both members counted")
+    close(bottom, 0.067, "the glass starts above the bottom member")
+    close(geometry.volume(built["Frame"]),
+          (1.000 * 1.500 - clear_w * clear_h) * 0.144,
+          "the kozijn is 144 mm deep, not the 300 mm of wall")
+    close(geometry.volume(built["Glass"]), clear_w * clear_h * 0.020,
+          "the glass is the whole opening, 20 mm thick")
+    (_lx, ly, _lz), (_hx, hy, hz) = geometry.bounds(built["Frame"])
+    close(ly, 0.0, "the frame sits on the face that was clicked")
+    close(hy, 0.144, "and stops 144 mm into the wall")
+    close(hz, 1.500, "reaching the head of the opening")
+
+    # A draairaam: a sash with the glass set in it.
+    swung = geometry.parts(
+        params_mod.normalize({"kind": "window", "type": "swing",
+                              "open_angle": 0.0}), depth)
+    check(set(swung) == {"Frame", "Sash", "Glass"},
+          f"a draairaam has a sash to open: {sorted(swung)}")
+    for name, faces in swung.items():
+        check_closed(name, faces)
+        check_outward(name, faces)
+    inset = 0.054
+    glass_w = clear_w - 2 * inset
+    glass_h = clear_h - 2 * inset
+    close(geometry.volume(swung["Sash"]),
+          (clear_w * clear_h - glass_w * glass_h) * 0.067,
+          "the sash is a 54 mm frame, 67 mm deep")
+    close(geometry.volume(swung["Glass"]), glass_w * glass_h * 0.020,
+          "and the glass is what the sash leaves it")
+
+    # Closed it is a thin section; open 90° it lies across the opening, which
+    # is what the arc in the plan is drawn from.
+    closed = geometry.bounds(swung["Sash"])
+    opened = geometry.bounds(geometry.parts(
+        params_mod.normalize({"kind": "window", "type": "swing",
+                              "open_angle": 90.0}), depth)["Sash"])
+    check(closed[1][1] - closed[0][1] < 0.10,
+          f"closed, the sash is one section deep: {closed}")
+    check(opened[1][1] - opened[0][1] > clear_w * 0.9,
+          f"open 90 degrees it reaches across the opening: {opened}")
+
+    swing_p = params_mod.normalize({"kind": "window", "type": "swing"})
+    pivot, _y0, _t, _y1 = geometry.hinge_and_panel(swing_p, 0.144)
+    segments = geometry.swing_symbol(swing_p, depth)
+    check(segments, "the draairaam has an arc")
+    for a, b in segments:
+        for point in (a, b):
+            close(math.hypot(point[0] - pivot[0], point[1] - pivot[1]),
+                  clear_w, "the arc is the sash's width from the hinge",
+                  tol=1e-9)
+    check(geometry.swing_symbol(fixed, depth) == [],
+          "and a fixed window has none")
+
+    # Validation: a sash section that leaves no room for glass is refused.
+    crowded = params_mod.normalize({"kind": "window", "type": "swing",
+                                    "width": 0.40, "sash_w": 0.090})
+    check(any("no room for glass" in problem
+              for problem in params_mod.validate(crowded)),
+          f"a sash with no room for glass is reported: "
+          f"{params_mod.validate(crowded)}")
+
+
 def main() -> int:
     install_package()
-    global params_mod, geometry
+    global params_mod, geometry, profiles_mod
+    profiles_mod = load("profiles")
     params_mod = load("params")
     geometry = load("geometry")
 
@@ -343,6 +466,7 @@ def main() -> int:
     test_handing_and_swing()
     test_symbol()
     test_params()
+    test_window()
 
     if failures:
         for failure in failures:

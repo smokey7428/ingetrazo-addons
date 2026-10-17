@@ -36,8 +36,11 @@ log = logging.getLogger("ingetrazo.plugins")
 
 _TEXTS = {
     "es": {
-        "Doors": "Puertas",
+        "Openings": "Huecos",
         "Doors & windows": "Puertas y ventanas",
+        "Place…": "Colocar…",
+        "Edit…": "Editar…",
+        "Erase": "Eliminar",
         "Door": "Puerta",
         "Place a door": "Colocar una puerta",
         "Cut an opening in a wall and stand a parametric door in it.":
@@ -66,12 +69,12 @@ def _t(text: str, **kw) -> str:
 def setup(app) -> None:
     """Called once, when the main window is built."""
     from . import host, scenes
-    from .object import is_door
-    from .panel import DoorsPanel
+    from .object import is_opening
+    from .panel import OpeningsPanel
     from .tool import TOOL_KEY, DoorTool
 
-    panel = DoorsPanel(app)
-    dock = app.add_panel(_t("Doors"), panel)
+    panel = OpeningsPanel(app)
+    dock = app.add_panel(_t("Openings"), panel)
     panel.attach_dock(dock)
     _remember(panel)
 
@@ -88,14 +91,14 @@ def setup(app) -> None:
     # of the two that matter most.
     sub = app.add_menu(_t("Doors & windows"))
     if sub is not None:
-        sub.addAction(_t("Place a door"),
+        sub.addAction(_t("Place…"),
                       lambda: host.activate(app, TOOL_KEY))
-        sub.addAction(_t("Edit door"), lambda: app.show_panel(dock))
-        sub.addAction(_t("Erase door"), panel._on_erase)
+        sub.addAction(_t("Edit…"), lambda: app.show_panel(dock))
+        sub.addAction(_t("Erase"), panel._on_erase)
         sub.addSeparator()
         sub.addAction(_t("Make plan / elevation / 3D"),
                       lambda: scenes.make(app.viewport,
-                                          panel.draft()["symbol_layer"]))
+                                          params_mod.SYMBOL_LAYER))
         sub.addAction(_t("Redraw the swing symbols"),
                       lambda: _scenes_refresh(app))
 
@@ -117,19 +120,19 @@ def _context_menu(menu, selection) -> None:
     from PySide6.QtCore import QTimer
     from PySide6.QtGui import QAction
 
-    from .object import is_door
+    from .object import is_opening
 
-    doors = [item for item in selection if is_door(item)]
-    if not doors:
+    items = [item for item in selection if is_opening(item)]
+    if not items:
         return
     menu.addSeparator()
-    action = QAction(_t("Edit door"), menu)
+    action = QAction(_t("Edit"), menu)
     # Through a single shot, so the dialog-free panel is raised after the menu
     # has closed rather than under it.
     action.triggered.connect(lambda _c=False: QTimer.singleShot(
         0, lambda: _raise_panel()))
     menu.addAction(action)
-    erase = QAction(_t("Erase door"), menu)
+    erase = QAction(_t("Erase"), menu)
     erase.triggered.connect(lambda _c=False: QTimer.singleShot(
         0, lambda: _erase_selection()))
     menu.addAction(erase)
@@ -137,10 +140,10 @@ def _context_menu(menu, selection) -> None:
 
 def _panel():
     """The doors panel this extension added at setup."""
-    from .panel import DoorsPanel
+    from .panel import OpeningsPanel
 
     for widget in _PANELS:
-        if isinstance(widget, DoorsPanel):
+        if isinstance(widget, OpeningsPanel):
             return widget
     return None
 
@@ -158,21 +161,31 @@ def _erase_selection() -> None:
 
 
 def _outliner_kind(group) -> dict | None:
-    """What our groups are, in the Browser: the door, its symbol, its parts."""
+    """What our groups are, in the Browser: the opening, its symbol and its
+    parts — the Type column the filter finds, and the tooltip that reads out
+    what the thing actually is."""
     from . import object as object_mod
     from . import params as params_mod
+    from . import profiles
 
     data = object_mod.data_of(group)
     if data is not None:
         values = params_mod.normalize(data.get("params"))
-        return {"type": "Door", "props": [
+        props = [
             ("Size", f"{values['width'] * 1000:.0f} × "
                      f"{values['height'] * 1000:.0f} mm"),
-            ("Handing", values["handing"]),
-            ("Swing", f"{values['swing']}, {values['open_angle']:.0f}°"),
-        ]}
-    if getattr(group, "name", "") == "Door swing":
-        return {"type": "Door swing symbol",
+            ("Type", profiles.label(values["kind"], values["type"])),
+        ]
+        if params_mod.moves(values):
+            props.append(("Handing",
+                          f"{values['handing']}, opens {values['swing']}"))
+            props.append(("Open angle", f"{values['open_angle']:.0f}°"))
+        else:
+            props.append(("Fixed", "nothing opens"))
+        return {"type": "Window" if params_mod.is_window(values) else "Door",
+                "props": props}
+    if getattr(group, "name", "") == object_mod.SYMBOL_NAME:
+        return {"type": "Swing symbol",
                 "props": [("Layer", getattr(group, "layer", "") or "")]}
     return None
 

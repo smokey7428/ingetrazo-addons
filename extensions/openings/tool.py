@@ -115,7 +115,7 @@ class DoorTool(Tool):
         if object_mod.run(viewport, make, self._t("Door placed")):
             door = placed.get("door")
             if door is not None:
-                self.panel.show_door(door)
+                self.panel.show_opening(door)
             # Stay active: a plan is several doors, and the tool is re-entered
             # deliberately with the same click that leaves it.
             self._rebuild_preview(viewport)

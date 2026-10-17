@@ -153,31 +153,36 @@ def _within(face, points) -> bool:
 def plan(scene, face, click: QVector3D, p: dict):
     """``(origin, X, Y, Z, depth, corners)`` — decided, nothing touched yet.
 
-    The opening stands on the bottom of the wall face it is cut into (the
-    floor, for a wall standing on the floor) and is centred where the user
-    clicked along it, slid inside the face rather than hanging off a jamb.
+    The opening stands ``sill`` above the bottom of the wall face it is cut
+    into — the floor for a door, 900 mm up for a window — and is centred where
+    the user clicked along it, slid inside the face rather than hanging off a
+    jamb.
 
-    Deciding before cutting is the point: the caller finds out that a door
+    Deciding before cutting is the point: the caller finds out that an opening
     will not fit while the document is still intact.
     """
     across, into, up = axes(face)
     min_u, max_u, min_v, max_v = _extents(face, across, up)
 
     width, height = p["width"], p["height"]
+    sill = max(float(p.get("sill", 0.0)), 0.0)
     room = max_u - min_u
     if width > room + _EPS:
         raise OpeningError(
-            f"The door is wider than the wall face it would be cut into "
+            f"The opening is wider than the wall face it would be cut into "
             f"({width:.2f} m against {room:.2f} m). Pick a wider face, or make "
-            f"the door narrower.")
-    if height > max_v - min_v + _EPS:
+            f"it narrower.")
+    if sill + height > max_v - min_v + _EPS:
+        where = "above the floor" if sill else "tall"
         raise OpeningError(
-            f"The door is taller than the wall it would be cut into "
-            f"({height:.2f} m against {max_v - min_v:.2f} m).")
+            f"The opening does not fit the wall: {height:.2f} m "
+            f"{where} starting {sill:.2f} m up needs "
+            f"{sill + height:.2f} m of wall, and this one is "
+            f"{max_v - min_v:.2f} m.")
 
     left = QVector3D.dotProduct(click, across) - width * 0.5
     left = min(max(left, min_u), max_u - width)
-    base = min_v
+    base = min_v + sill
 
     origin = at(face, across, up, left, base)
     corners = [origin,

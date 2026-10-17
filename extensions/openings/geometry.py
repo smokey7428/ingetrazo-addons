@@ -158,120 +158,167 @@ def prism(outline, holes, start: float, end: float, plane: str = "xz") -> list:
     return faces
 
 
-# ---- the leaf's hinge -------------------------------------------------------
-def _rotate(point, pivot, angle: float):
-    """``point`` turned about ``pivot`` in the (x, y) plane."""
+# ---- the moving panel -------------------------------------------------------
+def _rect(x0, z0, x1, z1) -> list:
+    """A rectangle in the elevation plane, wound so its normal faces -y."""
+    return [(x0, z0), (x1, z0), (x1, z1), (x0, z1)]
+
+
+def _rotate_faces(faces, pivot: tuple, angle: float) -> list:
+    """Every point turned about the vertical hinge at ``pivot``, in (x, y).
+
+    One helper for everything that opens — a door's leaf, its handle, a
+    window's sash and the glass in it — because they are all the same shape: a
+    profile in elevation, a depth, and a hinge down one side.
+    """
+    if abs(angle) < 1e-12:
+        return faces
     cos_a, sin_a = math.cos(angle), math.sin(angle)
-    dx, dy = point[0] - pivot[0], point[1] - pivot[1]
-    return (pivot[0] + dx * cos_a - dy * sin_a,
-            pivot[1] + dx * sin_a + dy * cos_a)
+    px, py = pivot
+
+    def turn(point):
+        dx, dy = point[0] - px, point[1] - py
+        return (px + dx * cos_a - dy * sin_a,
+                py + dx * sin_a + dy * cos_a,
+                point[2])
+
+    return [([turn(q) for q in loop], [[turn(q) for q in h] for h in holes])
+            for loop, holes in faces]
 
 
-def _rect(x0, y0, x1, y1, pivot=None, angle: float = 0.0):
-    corners = [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
-    if pivot is None or not corners:
-        return corners
-    return [_rotate(c, pivot, angle) for c in corners]
+def panel(outline, holes, y0: float, y1: float, pivot: tuple,
+          angle: float) -> list:
+    """A part that opens: its profile in elevation, its depth, turned by its
+    hinge. ``holes`` is what makes a window's sash a frame rather than a slab.
+    """
+    return _rotate_faces(prism(outline, holes, y0, y1, plane="xz"), pivot, angle)
 
 
 def frame_opening(p: dict) -> tuple[float, float, float, float]:
-    """``(clear_width, clear_height, jamb_x, head_z)`` — the hole the leaf sits
-    in, inside the lining. A door has no lining along the floor, so the clear
-    height is measured from the floor."""
+    """``(clear_width, clear_height, jamb, bottom)`` — the hole inside the
+    frame, which is where the panel, the sash and the glass all live.
+
+    A door has no bottom member, so its clear height runs from the floor; a
+    window's kozijn does have one, which is what ``frame_b`` is.
+    """
     clear_w = max(p["width"] - 2.0 * p["frame_w"], 0.0)
-    clear_h = max(p["height"] - p["frame_h"], 0.0)
-    return clear_w, clear_h, p["frame_w"], p["frame_h"]
+    clear_h = max(p["height"] - p["frame_h"] - p["frame_b"], 0.0)
+    return clear_w, clear_h, p["frame_w"], p["frame_b"]
 
 
-def hinge_and_leaf(p: dict, wall_depth: float) -> tuple[tuple, float, float]:
-    """``(pivot, leaf_thickness, leaf_centre_y)`` — where the leaf turns.
+def hinge_and_panel(p: dict, depth: float) -> tuple[tuple, float, float, float]:
+    """``(pivot, y0, thickness, y1)`` — where the moving part is, and where it
+    turns.
 
-    The leaf sits centred in the opening, so its hinge axis runs through the
-    middle of its thickness: a real hinge hangs on the leaf's face, but a door
-    that pivots about its own centre line is the one whose swing symbol and
-    whose open leaf agree.
+    The part sits centred in the frame's depth, and its hinge axis runs through
+    the middle of its thickness: a real hinge hangs on the panel's face, but a
+    panel that pivots about its own centre line is the one whose swing symbol
+    and whose open position agree.
     """
     hangs_left, _ = params_mod.leaf_direction(p)
-    clear_w, _clear_h, jamb, _head = frame_opening(p)
+    clear_w, _clear_h, jamb, _bottom = frame_opening(p)
+
+    if params_mod.is_window(p):
+        thickness = min(p["sash_d"], depth)
+    else:
+        thickness = min(p["leaf_t"], depth)
+    y0 = max((depth - thickness) * 0.5, 0.0)
     pivot_x = jamb if hangs_left > 0 else jamb + clear_w
-    thickness = min(p["leaf_t"], max(float(wall_depth), 0.02))
-    centre_y = max(float(wall_depth), 0.02) * 0.5
-    return (pivot_x, centre_y), thickness, centre_y
+    return (pivot_x, y0 + thickness * 0.5), y0, thickness, y0 + thickness
 
 
 # ---- the parts --------------------------------------------------------------
 def parts(p: dict, wall_depth: float) -> dict:
-    """Every part of the door, as ``{name: [face, …]}``.
+    """Every part of the opening, as ``{name: [face, …]}``.
 
-    ``Frame`` — the lining through the opening, a ring the full depth of the
-    wall; ``Leaf`` — the leaf standing open at ``open_angle``; ``Threshold`` —
-    a saddle across the opening, when asked for; ``Handle`` — a lever on the
-    leaf, turning with it.
+    ``Frame`` is the lining — the kozijn, a ring the section's depth into the
+    wall; ``Leaf`` (a door) or ``Sash`` (an opening window) is what moves, with
+    its ``Glass``; ``Threshold`` and ``Handle`` a door may add.
+
+    The same names for both kinds, so the Parts tray, the pose reading and the
+    tests do not care which one it is.
     """
     p = params_mod.normalize(p)
     depth = max(float(wall_depth), 0.02)
-    clear_w, clear_h, jamb, head = frame_opening(p)
-    hangs_left, _opens_away = params_mod.leaf_direction(p)
+    held = params_mod.frame_depth(p, depth)
+    clear_w, clear_h, jamb, bottom = frame_opening(p)
     angle = params_mod.swing_angle(p)
-    pivot, thickness, centre_y = hinge_and_leaf(p, depth)
+    pivot, y0, thickness, y1 = hinge_and_panel(p, held)
+    hangs_left, _opens_away = params_mod.leaf_direction(p)
 
     out: dict = {}
 
-    # The lining: the opening rectangle, less the clear hole, through the wall.
-    # No member along the floor — that is a threshold, not part of the frame —
-    # so the clear height is measured from the floor to under the head lining.
-    outline = [(0.0, 0.0), (p["width"], 0.0),
-               (p["width"], p["height"]), (0.0, p["height"])]
-    inner = [(jamb, 0.0), (jamb + clear_w, 0.0),
-             (jamb + clear_w, clear_h), (jamb, clear_h)]
-    out["Frame"] = prism(outline, [inner], 0.0, depth, plane="xz")
+    # The frame: the opening rectangle, less the clear hole, as deep as the
+    # section. `frame_depth` of 0 follows the wall, which is what a door lining
+    # does; a window's kozijn is its own 67 × 144.
+    outline = _rect(0.0, 0.0, p["width"], p["height"])
+    inner = _rect(jamb, bottom, jamb + clear_w, bottom + clear_h)
+    out["Frame"] = prism(outline, [inner], 0.0, held, plane="xz")
 
-    # The leaf, standing open: its cross-section turned about the hinge, then
-    # raised from the floor to under the head lining.
-    leaf_x = jamb if hangs_left > 0 else jamb + clear_w
-    leaf_far = leaf_x + hangs_left * clear_w
-    leaf_rect = _rect(min(leaf_x, leaf_far), centre_y - thickness * 0.5,
-                      max(leaf_x, leaf_far), centre_y + thickness * 0.5,
-                      pivot=pivot, angle=angle)
-    out["Leaf"] = prism(leaf_rect, [], 0.0, clear_h, plane="xy")
+    panel_x0 = jamb if hangs_left > 0 else jamb + clear_w
+    panel_x1 = panel_x0 + hangs_left * clear_w
+    left, right = min(panel_x0, panel_x1), max(panel_x0, panel_x1)
+
+    if params_mod.is_window(p):
+        if thickness > 0.0:
+            # The sash: a frame in elevation, 54 mm of face and 67 mm deep, so
+            # its glass has somewhere to sit.
+            inset = p["sash_w"]
+            sash_inner = _rect(left + inset, bottom + inset,
+                               right - inset, bottom + clear_h - inset)
+            out["Sash"] = panel(_rect(left, bottom, right, bottom + clear_h),
+                                [sash_inner], y0, y1, pivot, angle)
+            glass = sash_inner
+        else:
+            glass = _rect(left, bottom, right, bottom + clear_h)
+        if params_mod.glazed(p):
+            half = min(p["glass_t"], thickness if thickness else held) * 0.5
+            centre = (y0 + y1) * 0.5 if thickness else held * 0.5
+            out["Glass"] = panel(glass, [], centre - half, centre + half,
+                                 pivot, angle)
+        return out
+
+    # A door: the leaf is a slab of the clear opening, and the frame it hangs
+    # in is the lining.
+    if thickness > 0.0:
+        out["Leaf"] = panel(_rect(left, bottom, right, bottom + clear_h), [],
+                            y0, y1, pivot, angle)
+
+        if p["handle"] > 0.0 and p["handle_len"] > 0.0:
+            # A lever near the free edge, standing out of the face of the leaf
+            # on the side the user is on, and turning with the leaf.
+            free = panel_x0 + hangs_left * clear_w
+            inward = -hangs_left
+            hx0 = min(free + inward * 0.13, free + inward * 0.03)
+            hx1 = max(free + inward * 0.13, free + inward * 0.03)
+            out["Handle"] = panel(
+                _rect(hx0, p["handle"] - 0.015, hx1, p["handle"] + 0.015), [],
+                y0 - p["handle_len"], y0, pivot, angle)
 
     if p["threshold"] > 0.0:
-        saddle = [(jamb, 0.0), (jamb + clear_w, 0.0),
-                  (jamb + clear_w, depth), (jamb, depth)]
-        out["Threshold"] = prism(saddle, [], 0.0, p["threshold"], plane="xy")
-
-    if p["handle"] > 0.0:
-        # A lever near the free edge, standing out of the face of the leaf the
-        # user is on, and turning with the leaf.
-        free = leaf_x + hangs_left * clear_w
-        inward = -hangs_left                      # back from the free edge
-        x0 = min(free + inward * 0.13, free + inward * 0.03)
-        x1 = max(free + inward * 0.13, free + inward * 0.03)
-        face_y = centre_y - thickness * 0.5
-        lever = _rect(x0, face_y - p["handle_len"], x1, face_y,
-                      pivot=pivot, angle=angle)
-        out["Handle"] = prism(lever, [], p["handle"] - 0.015,
-                              p["handle"] + 0.015, plane="xy")
+        saddle = _rect(jamb, 0.0, jamb + clear_w, p["threshold"])
+        out["Threshold"] = prism(saddle, [], 0.0, depth, plane="xz")
     return out
 
 
 def swing_symbol(p: dict, wall_depth: float) -> list:
     """The swing arc as ``[(a, b), …]`` straight segments, at ``symbol_z``.
 
-    The leaf's free edge, swept from closed to open: the convention every plan
-    drawing uses, and the only part of a door that is not a solid. It is kept
-    out of the door's own groups so that a layer can hide it — a nested group's
-    layer is not consulted by the drawing pass, but a top-level group's is.
+    The free edge of what opens, swept from closed to open: the convention
+    every plan drawing uses, and the only part of an opening that is not a
+    solid. It is kept out of the opening's own groups so that a layer can hide
+    it — a nested group's layer is not consulted by the drawing pass, but a
+    top-level group's is.
     """
     p = params_mod.normalize(p)
-    if not p["symbol"]:
+    if not p["symbol"] or not params_mod.moves(p):
         return []
     depth = max(float(wall_depth), 0.02)
-    clear_w, _clear_h, _jamb, _head = frame_opening(p)
+    clear_w, _clear_h, _jamb, _bottom = frame_opening(p)
     if clear_w <= 0.0:
         return []
     hangs_left, _opens_away = params_mod.leaf_direction(p)
-    pivot, _thickness, _centre_y = hinge_and_leaf(p, depth)
+    pivot, _y0, _t, _y1 = hinge_and_panel(p, params_mod.frame_depth(p, depth))
     theta = params_mod.swing_angle(p)
     start = 0.0 if hangs_left > 0 else math.pi
 
@@ -288,15 +335,16 @@ def swing_symbol(p: dict, wall_depth: float) -> list:
 
 
 def outline_symbol(p: dict, wall_depth: float) -> list:
-    """The door's opening rectangle on the floor, as one closed loop.
+    """The opening rectangle, drawn on the layer the arc is on.
 
     The other half of the plan symbol: without it the arc floats. Drawn at
-    ``symbol_z`` like the arc, and on the same layer.
+    ``symbol_z`` like the arc, which is measured from the bottom of the
+    opening — the floor for a door, the sill for a window.
     """
     p = params_mod.normalize(p)
     if not p["symbol"]:
         return []
-    clear_w, _clear_h, jamb, _head = frame_opening(p)
+    clear_w, _clear_h, jamb, _bottom = frame_opening(p)
     if clear_w <= 0.0:
         return []
     z = p["symbol_z"]

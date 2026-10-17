@@ -37,7 +37,11 @@ from . import params as params_mod
 
 log = logging.getLogger("ingetrazo.plugins.openings")
 
-#: Where the doors' own bookkeeping lives in the document: one record per door
+#: What a swing symbol's group is called — the Browser and the outliner read
+#: it, and so do we when one has to be found again.
+SYMBOL_NAME = "Swing symbol"
+
+#: Where the openings' own bookkeeping lives in the document: one record each
 #: keyed by its container's uid — the opening to close, and its symbol group.
 def registry(scene) -> dict:
     """The doors' bookkeeping — read only. Write it with
@@ -62,17 +66,17 @@ def _write_registry(scene, doors: dict) -> None:
 
 # ---- reading a door ---------------------------------------------------------
 def data_of(group) -> dict | None:
-    """The door's own record on ``group``, or ``None`` if it is not a door."""
+    """The opening's own record on ``group``, or ``None`` if it is not one."""
     ext = getattr(group, "ext", None) or {}
     found = ext.get(params_mod.KEY) if isinstance(ext, dict) else None
     return found if isinstance(found, dict) else None
 
 
-def is_door(group) -> bool:
+def is_opening(group) -> bool:
     return data_of(group) is not None
 
 
-def door_params(group) -> dict:
+def opening_params(group) -> dict:
     """The door's parameters, normalised — never the raw stored dict."""
     return params_mod.normalize((data_of(group) or {}).get("params"))
 
@@ -124,16 +128,35 @@ def frame_matrix(frame: dict) -> QMatrix4x4:
 
 # ---- materials --------------------------------------------------------------
 def ensure_materials(scene, p: dict) -> None:
-    """Make sure the two materials the door paints with exist."""
+    """Make sure the materials the opening paints with exist."""
     from core.materials import Material
 
     mats = scene.materials
-    if p["frame_mat"] not in mats:
-        mats[p["frame_mat"]] = Material(p["frame_mat"],
-                                        color=(120 / 255, 120 / 255, 124 / 255))
-    if p["leaf_mat"] not in mats:
-        mats[p["leaf_mat"]] = Material(p["leaf_mat"],
-                                       color=(196 / 255, 168 / 255, 120 / 255))
+    wanted = {p["frame_mat"]: (120 / 255, 120 / 255, 124 / 255),
+              p["leaf_mat"]: (196 / 255, 168 / 255, 120 / 255)}
+    if params_mod.glazed(p):
+        # Glass reads as glass only if it is not opaque.
+        wanted[p["glass_mat"]] = (176 / 255, 196 / 255, 206 / 255)
+    for name, colour in wanted.items():
+        if name not in mats:
+            translucent = params_mod.glazed(p) and name == p["glass_mat"]
+            mats[name] = Material(name, color=colour,
+                                  opacity=0.35 if translucent else 1.0)
+
+
+#: Which material each part is painted with. Anything not listed takes the
+#: frame's, which is what a threshold and a handle are.
+def _paint_for(p: dict, part: str) -> str:
+    if part == "Glass":
+        return p["glass_mat"]
+    if part in ("Leaf", "Sash"):
+        return p["leaf_mat"]
+    return p["frame_mat"]
+
+
+#: The tray shows the parts; keep them in an order that reads like a door or a
+#: window should be assembled.
+PART_ORDER = ("Frame", "Leaf", "Sash", "Glass", "Threshold", "Handle")
 
 
 def _paint(scene, name: str) -> dict:
@@ -141,7 +164,7 @@ def _paint(scene, name: str) -> dict:
     if material is None:
         raise opening_mod.OpeningError(
             f'The material "{name}" is not in the document any more. Pick '
-            f'another one in the Doors panel.')
+            f'another one in the panel.')
     return material.face_attrs()
 
 
@@ -154,7 +177,7 @@ def ensure_layers(scene, p: dict) -> None:
     from core.layers import Layer
 
     names = {ly.name for ly in scene.layers}
-    for name in (params_mod.DEFAULT_LAYER, p["symbol_layer"]):
+    for name in (params_mod.layer(p), params_mod.SYMBOL_LAYER):
         if name and name not in names:
             scene.layers.append(Layer(name))
             names.add(name)
@@ -172,21 +195,21 @@ def _mesh_from(faces) -> Mesh:
 
 
 def build_parts(scene, p: dict, wall_depth: float, matrix: QMatrix4x4) -> list:
-    """The door's parts as nested groups, all placed by ``matrix``."""
+    """The opening's parts as nested groups, all placed by ``matrix``.
+
+    Whatever :mod:`openings.geometry` produced, in the order a door or a window
+    is assembled — so a fixed window simply has fewer of them.
+    """
     p = params_mod.normalize(p)
     built = geometry.parts(p, wall_depth)
-    paints = {"Frame": _paint(scene, p["frame_mat"]),
-              "Leaf": _paint(scene, p["leaf_mat"]),
-              "Threshold": _paint(scene, p["frame_mat"]),
-              "Handle": _paint(scene, p["frame_mat"])}
 
     parts = []
-    for name in ("Frame", "Leaf", "Threshold", "Handle"):
+    for name in PART_ORDER:
         faces = built.get(name)
         if not faces:
             continue
         mesh = _mesh_from(faces)
-        attrs = paints[name]
+        attrs = _paint(scene, _paint_for(p, name))
         for face in mesh.faces:
             face.attrs = dict(attrs)
         group = Group(mesh, name=name)
@@ -223,7 +246,7 @@ def build_symbol(p: dict, wall_depth: float, matrix: QMatrix4x4,
     if not mesh.edges:
         return None
 
-    group = Group(mesh, name="Door swing")
+    group = Group(mesh, name=SYMBOL_NAME)
     group.xform = QMatrix4x4(matrix)
     group.component = False
     group.layer = layer
@@ -234,13 +257,21 @@ def _far_enough(a, b) -> bool:
     return (abs(a[0] - b[0]) + abs(a[1] - b[1]) + abs(a[2] - b[2])) > 1e-9
 
 
-def _next_name(scene) -> str:
+def _next_name(scene, kind: str) -> str:
+    """``Door 01``, ``Window 03`` — the first free number of its kind."""
+    stem = "Window" if kind == "window" else "Door"
     taken = {g.name for g in scene.groups}
     for i in range(1, 1000):
-        name = f"Door {i:02d}"
+        name = f"{stem} {i:02d}"
         if name not in taken:
             return name
-    return "Door"
+    return stem
+
+
+def ifc_class(p: dict) -> str:
+    """The IFC class the opening is tagged with — the core's export and the
+    BIM panel both read it, and the ifc_editor extension edits the rest."""
+    return "IfcWindow" if params_mod.is_window(p) else "IfcDoor"
 
 
 # ---- create / rebuild / erase ----------------------------------------------
@@ -266,12 +297,12 @@ def create(scene, face, click: QVector3D, p: dict, name: str | None = None,
 
     record = opening_mod.cut(scene, face, corners, depth)
 
-    name = name or _next_name(scene)
+    name = name or _next_name(scene, p["kind"])
     group = Group(name=name)
     group.adopt(parts)
     group.component = False
-    group.layer = params_mod.DEFAULT_LAYER
-    group.ifc = {"class": "IfcDoor", "name": name}
+    group.layer = params_mod.layer(p)
+    group.ifc = {"class": ifc_class(p), "name": name}
     group.ext = {params_mod.KEY: {"params": p, "frame": frame,
                                   "outline": [opening_mod.as_tuple(q)
                                               for q in corners],
@@ -279,7 +310,7 @@ def create(scene, face, click: QVector3D, p: dict, name: str | None = None,
                                   "opened": False}}
     scene.groups.append(group)
 
-    symbol = build_symbol(p, depth, matrix, p["symbol_layer"])
+    symbol = build_symbol(p, depth, matrix, params_mod.SYMBOL_LAYER)
     if symbol is not None:
         scene.groups.append(symbol)
 
@@ -354,8 +385,7 @@ def rebuild(scene, group, p: dict) -> None:
     stored["params"] = p
     stored["frame"] = frame
     group.ext = dict(group.ext or {}, **{params_mod.KEY: stored})
-    if group.ifc is None:
-        group.ifc = {"class": "IfcDoor", "name": group.name}
+    group.ifc = {"class": ifc_class(p), "name": group.name}
 
     _replace_symbol(scene, group, p, depth, matrix)
 
@@ -368,7 +398,7 @@ def _replace_symbol(scene, group, p: dict, depth: float,
         if old in scene.groups:
             scene.groups.remove(old)
         scene.selection.discard(old)
-    fresh = build_symbol(p, depth, matrix, p["symbol_layer"])
+    fresh = build_symbol(p, depth, matrix, params_mod.SYMBOL_LAYER)
     if fresh is not None:
         scene.groups.append(fresh)
     doors = dict(registry(scene))

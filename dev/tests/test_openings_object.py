@@ -161,7 +161,7 @@ def test_plan() -> None:
                          params_mod.normalize({"width": 0.40, "height": 3.90}))
         check(False, "a door taller than the wall should be refused")
     except opening_mod.OpeningError as exc:
-        check("taller than the wall" in str(exc), f"and the reason: {exc}")
+        check("does not fit the wall" in str(exc), f"and the reason: {exc}")
 
     # No wall behind it: refused rather than boring a tunnel.
     lone_scene = app_stubs.Scene()
@@ -253,9 +253,10 @@ def test_door_lifecycle() -> None:
     check(ok, f"placing a door succeeds: {viewport.history.last_error}")
 
     door = result["door"]
-    check(object_mod.is_door(door), "the container is a door")
+    check(object_mod.is_opening(door), "the container is a door")
     equal(door.ifc.get("class"), "IfcDoor", "and is tagged IfcDoor")
-    equal(door.layer, params_mod.DEFAULT_LAYER, "on the Doors layer")
+    equal(door.layer, params_mod.layer(params_mod.normalize({})),
+          "on the Doors layer")
     check(scene.mesh.is_closed(), "the wall is closed around it")
 
     names = [k.name for k in door.children]
@@ -266,7 +267,7 @@ def test_door_lifecycle() -> None:
     # it (a nested group's layer is never consulted).
     symbol = object_mod.symbol_group(scene, door)
     check(symbol is not None, "the door has a swing symbol")
-    equal(symbol.layer, params_mod.normalize({})["symbol_layer"],
+    equal(symbol.layer, params_mod.SYMBOL_LAYER,
           "the symbol is on the plan-symbol layer")
     check(symbol in scene.groups, "as a top-level group")
     check(symbol.mesh.edges, "made of edges, not faces")
@@ -274,9 +275,9 @@ def test_door_lifecycle() -> None:
 
     # Both layers were made, so the symbol can be switched off per view.
     layer_names = {ly.name for ly in scene.layers}
-    check(params_mod.DEFAULT_LAYER in layer_names, "the Doors layer exists")
-    check(params_mod.normalize({})["symbol_layer"] in layer_names,
-          "and the symbol's layer")
+    check(params_mod.layer(params_mod.normalize({})) in layer_names,
+          "the Doors layer exists")
+    check(params_mod.SYMBOL_LAYER in layer_names, "and the symbol's layer")
 
     # The door's own bookkeeping is in the document, JSON-safe and all.
     stored = scene.plugin_data[params_mod.KEY]
@@ -288,7 +289,7 @@ def test_door_lifecycle() -> None:
     object_mod.run(viewport, lambda s: object_mod.rebuild(
         s, door, params_mod.normalize({"handing": "right", "open_angle": 45.0,
                                        "threshold": 0.0})), "")
-    equal(object_mod.door_params(door)["handing"], "right",
+    equal(object_mod.opening_params(door)["handing"], "right",
           "the new parameter is kept")
     after = object_mod.current_frame(door, {})
     equal(after["origin"], placed["origin"], "and the door did not move")
@@ -297,7 +298,7 @@ def test_door_lifecycle() -> None:
     fresh_symbol = object_mod.symbol_group(scene, door)
     check(fresh_symbol is not None and fresh_symbol is not symbol,
           "the symbol was rebuilt in place, not duplicated")
-    equal(len([g for g in scene.groups if g.name == "Door swing"]), 1,
+    equal(len([g for g in scene.groups if g.name == object_mod.SYMBOL_NAME]), 1,
           "and there is still exactly one")
     check(scene.mesh.is_closed(), "the wall is still closed after the edit")
 
@@ -322,6 +323,73 @@ def test_door_lifecycle() -> None:
           "with its material")
 
 
+def test_window_lifecycle() -> None:
+    """A window is the same object as a door, with a sill and glazing."""
+    scene = app_stubs.Scene()
+    setup(scene)
+    viewport = app_stubs.Viewport(scene)
+    face = front_face(scene, 0.0)
+    V = app_stubs.QVector3D
+
+    made: dict = {}
+    ok = object_mod.run(viewport, lambda s: made.update(
+        window=object_mod.create(s, face, V(2.0, 0.0, 1.0),
+                                 params_mod.normalize({"kind": "window",
+                                                       "type": "swing"}),
+                                 viewport=viewport)), "Window placed")
+    check(ok, f"placing a window succeeds: {viewport.history.last_error}")
+    window = made["window"]
+
+    equal(window.ifc.get("class"), "IfcWindow", "it is tagged IfcWindow")
+    equal(window.layer, "Windows", "on the Windows layer")
+    equal([k.name for k in window.children], ["Frame", "Sash", "Glass"],
+          "a draairaam is a frame, a sash and its glass")
+    check(scene.mesh.is_closed(), "and the wall is closed around it")
+
+    # The sill: the opening starts 900 mm up the wall, not on the floor. The
+    # parts' own meshes are in the opening's coordinates, so the pose is where
+    # it says it is.
+    origin = window.children[0].xform.map(V(0.0, 0.0, 0.0))
+    close(origin.z(), 0.900, "the window stands on a 900 mm sill")
+    close(origin.x(), 2.0 - 0.500, "and is centred on the click")
+
+    # Glass is glass: the material is translucent, or it reads as a panel.
+    glass = scene.materials.get("Window glass")
+    check(glass is not None, "the glass material was made")
+    check(glass.opacity < 1.0, f"and it is translucent: {glass.opacity}")
+
+    # The symbol went on the shared plan layer, as a top-level group.
+    symbol = object_mod.symbol_group(scene, window)
+    check(symbol is not None, "the draairaam has a swing symbol")
+    equal(symbol.layer, params_mod.SYMBOL_LAYER, "on the shared plan layer")
+
+    # A fixed window has no sash, no symbol and nothing to open.
+    fixed = {}
+    object_mod.run(viewport, lambda s: fixed.update(
+        window=object_mod.create(s, front_face(s, 0.0), V(3.4, 0.0, 1.0),
+                                 params_mod.normalize({"kind": "window"}))), "")
+    equal([k.name for k in fixed["window"].children], ["Frame", "Glass"],
+          "a vast raam is a frame and its glass")
+    check(object_mod.symbol_group(scene, fixed["window"]) is None,
+          "and it has no swing symbol to hide")
+    equal(len([g for g in scene.groups
+               if g.name == object_mod.SYMBOL_NAME]), 1,
+          "so only the draairaam's symbol is in the model")
+    check(scene.mesh.is_closed(), "the wall is still closed, with two openings")
+
+    # ---- erasing brings the wall back ----
+    for item in (window, fixed["window"]):
+        object_mod.run(viewport, lambda s, i=item: object_mod.erase(s, i), "")
+    check(scene.mesh.is_closed(), "both openings closed")
+    equal(scene.plugin_data, {}, "and the bookkeeping is gone with them")
+
+    while viewport.history.undo():
+        pass
+    equal(scene.groups, [], "undo takes every opening away")
+    equal(len(scene.mesh.faces), 6, "and leaves the bare wall")
+    check(scene.mesh.is_closed(), "closed, as it started")
+
+
 def main() -> int:
     install_package()
     app_stubs.install()
@@ -335,6 +403,7 @@ def main() -> int:
     test_plan()
     test_cut_and_close()
     test_door_lifecycle()
+    test_window_lifecycle()
 
     if failures:
         for failure in failures:

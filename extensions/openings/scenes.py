@@ -112,7 +112,7 @@ def make(viewport, symbol_layer: str) -> list:
 
 
 def refresh(viewport) -> int:
-    """Redraw every door's swing symbol where the door stands now.
+    """Redraw every opening's swing symbol where the door stands now.
 
     The repair for the wart above: nothing associates the symbol with its door
     but our own bookkeeping, so a door that was moved by hand has left its
@@ -122,7 +122,7 @@ def refresh(viewport) -> int:
     from . import object as object_mod
 
     scene = viewport.scene
-    doors = [g for g in scene.groups if object_mod.is_door(g)]
+    doors = [g for g in scene.groups if object_mod.is_opening(g)]
     if not doors:
         return 0
 
@@ -130,7 +130,7 @@ def refresh(viewport) -> int:
         for door in doors:
             if door not in target.groups:
                 continue
-            values = object_mod.door_params(door)
+            values = object_mod.opening_params(door)
             data = object_mod.data_of(door) or {}
             depth = float(data.get("depth") or 0.2)
             frame = object_mod.current_frame(door, data.get("frame") or {})

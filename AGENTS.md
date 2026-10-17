@@ -22,8 +22,8 @@ tagged elements, IFC2X3 and IFC4, with its own `.ifc` writer. The brief, the
 constraints and the design are below.
 
 **Second add-on: `openings`** — parametric doors and windows, placed by clicking
-a wall, Revit-style, with a plan symbol and their IFC data. Under construction;
-see its own section below.
+a wall, Revit-style, with a plan symbol and their IFC data. Built; see its own
+section below.
 
 ## Layout of this project
 
@@ -322,9 +322,10 @@ its symbol behind — hence a "Refresh plan symbols" command.
 | `opening.py` | The frame a door is built in (`axes`), where the opening goes (`plan`), the four reveals, and cutting and closing the wall. |
 | `object.py` | The door as a document object: `create` / `rebuild` / `erase`, `preview` for the tool, the bookkeeping in `plugin_data`, the parts as nested groups of one pose, the swing symbol as its own top-level group, and `DoorCommand` — one user action, one undo step. |
 | `host.py` | The guarded private-API shim: registering and activating an interactive tool, and reading the point under the cursor. Says why, and refuses gracefully. |
-| `tool.py` | `DoorTool` — click a wall, see the door previewed, click to cut it. Stays active so a plan can be worked through. |
-| `panel.py` | The **Doors** tab: the settings for the next door with nothing selected, or the selected door's parameters, rebuilding it where it stands. Changes are coalesced on a short timer — one undo step per settled change, not per arrow key. |
+| `tool.py` | `DoorTool` — click a wall, see the opening previewed, click to cut it. Stays active so a plan can be worked through. |
+| `panel.py` | The **Openings** tab: the settings for the next door with nothing selected, or the selected door's parameters, rebuilding it where it stands. Changes are coalesced on a short timer — one undo step per settled change, not per arrow key. |
 | `scenes.py` | The Plan / Elevation / 3D scenes, and `refresh` to put a moved door's symbol back. |
+| `profiles.py` | **The Dutch standards**, in one place: timber sections (kozijnhout 67 × 144, raamhout 54 × 67), glazing (hr++ 20 mm), and the window and door types with their sizes and Dutch names. Adding a type later is a line of data here, not a change to the geometry. |
 | `__init__.py` | `setup(app)`: panel, tool, its own submenu, a right-click entry and the Browser's Type column. |
 
 Coordinates: **x** along the wall (0 at the left jamb), **y** into the wall
@@ -341,11 +342,47 @@ back on undo, and that the whole UI path works: the tool places from a click,
 the panel edits, the scenes are made and replaced, Erase closes the wall, and
 undo walks all of it back.
 
-### Still to build
+### Windows
 
-Windows (the tool that places them), a sill parameter for the same reason, and
-standard-size presets in the panel. Windows are the same machinery: the leaf,
-the lining and the arc already take a fixed/casement/slider variant.
+A door and a window are **the same object with different numbers**, which is why
+one panel, one tool and one set of geometry build both:
+
+* both are a **frame** lining an opening, made of a section — the width you see
+  in elevation (``frame_w``/``frame_h``/``frame_b``) and the depth into the wall
+  (``frame_depth``). ``frame_depth`` of 0 means "follow the wall", which is what
+  a door lining does; a window's kozijn is its own 67 × 144.
+* both may have a **part that moves** — a door's leaf, a window's sash — hung on
+  a hinge at one side and opening by ``open_angle``;
+* both may be **glazed** (``glass_t``), a door usually not, a window always;
+* a window stands on a **``sill``** (900 mm by default); a door stands on the
+  floor.
+
+| Built in | Opening | Sill | Frame | Sash | Glass |
+| --- | --- | --- | --- | --- | --- |
+| Vast raam — fixed window | 1000 × 1500 | 900 | kozijnhout **67 × 144** | — | **20 mm** |
+| Draairaam — side-hung window | 1000 × 1500 | 900 | kozijnhout **67 × 144** | raamhout **54 × 67** | **20 mm** |
+| Stompe deur — hinged door | 1064 × 2082 | 0 | **67** mm, follows the wall | leaf 42 mm | — |
+
+A door is ordered by its **leaf**, so its opening is derived: a 930 mm leaf in a
+67 mm frame wants a 1064 mm opening, and a 2015 mm leaf wants 2082 mm — the leaf
+plus the head member, a door having no bottom member. ``profiles.py`` also
+carries the leaf sizes a binnendeur is stocked in (630/730/830/930/1030 ×
+2015/2115/2315) for a preset row.
+
+The panel's **kind and type** convert the opening in front of you, like every
+other field — so a door can be turned into a window in one undo step, and a vast
+raam into a draairaam (which keeps the size and adds the sash).
+
+### One limitation, and one still to build
+
+Two openings in the same wall face **must not share a jamb edge**: their holes
+would share a boundary edge, and a face whose holes touch is no longer a face
+with two holes, so the wall would stop being closed. Put a mullion's worth of
+wall between them.
+
+Still to build: the standard-size preset row (the data is already in
+``profiles.py``), a top-hung or tilt-and-turn (valraam / draaikiepraam) variant,
+and doors and windows of more than one sash.
 
 ### The one place we deliberately differ from Windowizer
 

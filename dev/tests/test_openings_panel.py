@@ -279,10 +279,11 @@ def main() -> int:
     install_package()
     install_tools_stub()
 
-    params = load("params")
+    params_mod = load("params")
+    load("profiles")
     load("geometry")
     load("opening")
-    load("object")
+    object_mod = load("object")
     load("host")
     scenes_mod = load("scenes")
     tool_mod = load("tool")
@@ -297,8 +298,8 @@ def main() -> int:
 
     # ---- setup(app) ----
     extension.setup(app)
-    equal(list(app.panels), ["Doors"], "setup adds the Doors panel")
-    panel = app.panels["Doors"].widget
+    equal(list(app.panels), ["Openings"], "setup adds the Openings panel")
+    panel = app.panels["Openings"].widget
     check(panel._dock is not None, "the panel knows its own tab")
     check(bool(app.menus), "and the extension has its own submenu")
     equal(len(app.context_menus), 1, "and a right-click entry")
@@ -309,7 +310,7 @@ def main() -> int:
           "the door tool was registered in the host's tool table")
     check(panel._tool is not None, "and the panel can reach it")
     extension._raise_panel()
-    equal(app.shown, app.panels["Doors"], "the menu entry brings the panel up")
+    equal(app.shown, app.panels["Openings"], "the menu entry brings the panel up")
 
     # ---- nothing selected: the panel is the next door's settings ----
     panel.refresh()
@@ -343,7 +344,7 @@ def main() -> int:
     check(scene.mesh.is_closed(), "and the wall is still closed")
 
     # ---- the panel shows the door it just placed ----
-    equal(panel._door, door, "the panel followed the new door")
+    equal(panel._item, door, "the panel followed the new door")
     check("Door " in panel._status.text(), f"and names it: "
                                           f"{panel._status.text()!r}")
     check(panel._erase.isEnabled(), "and Erase is available")
@@ -353,7 +354,7 @@ def main() -> int:
     check("Threshold" not in before, "no threshold to begin with")
     panel._editors["threshold"][0].setValue(20.0)      # 20 mm, in mm
     panel._timer.fire()                             # what the debounce calls
-    equal(params.normalize(panel._read())["threshold"], 0.02,
+    equal(params_mod.normalize(panel._read())["threshold"], 0.02,
           "20 mm in the field is 0.02 m in the parameter")
     check("Threshold" in [k.name for k in door.children],
           "and the threshold part appeared")
@@ -367,7 +368,7 @@ def main() -> int:
     handing.setCurrentIndex(index)
     handing.currentIndexChanged.emit(index)
     panel._timer.fire()
-    equal(params.normalize(panel._read())["handing"], "right",
+    equal(params_mod.normalize(panel._read())["handing"], "right",
           "the panel read the choice back")
 
     # An impossible combination is refused with words, not a traceback.
@@ -380,8 +381,46 @@ def main() -> int:
     panel._editors["width"][0].setValue(900.0)
     panel._timer.fire()
 
+    # ---- switching to a window ----
+    kind_combo = panel._kind
+    index = kind_combo.findData("window")
+    check(index >= 0, "the panel offers windows")
+    kind_combo.setCurrentIndex(index)
+    kind_combo.currentIndexChanged.emit(index)
+    values = panel._read()
+    equal(values["kind"], "window", "the panel is set up for a window now")
+    equal(door.ifc.get("class"), "IfcWindow",
+          "and the opening in front of it was converted")
+    check("sill" in panel._editors, "the form offers a sill")
+    check("threshold" not in panel._editors, "and no longer a threshold")
+    check(abs(values["sill"] - 0.900) < 1e-9,
+          f"standing on 900 mm: {values['sill']}")
+    check(abs(values["frame_w"] - 0.067) < 1e-9,
+          f"in kozijnhout 67: {values['frame_w']}")
+    check(abs(values["frame_depth"] - 0.144) < 1e-9,
+          f"144 mm deep: {values['frame_depth']}")
+    equal([k.name for k in door.children], ["Frame", "Glass"],
+          "a vast raam is a frame and its glass")
+    check(scene.mesh.is_closed(), "and the wall is still closed")
+
+    # And a draairaam gets its sash, its 54 × 67 raamhout and its arc.
+    type_combo = panel._type
+    index = type_combo.findData("swing")
+    check(index >= 0, "the panel offers a draairaam")
+    type_combo.setCurrentIndex(index)
+    type_combo.currentIndexChanged.emit(index)
+    values = panel._read()
+    equal(values["type"], "swing", "the type followed")
+    check(abs(values["sash_w"] - 0.054) < 1e-9, "raamhout 54 mm")
+    check(abs(values["sash_d"] - 0.067) < 1e-9, "67 mm deep")
+    equal([k.name for k in door.children], ["Frame", "Sash", "Glass"],
+          "and now there is a sash to open")
+    check(object_mod.symbol_group(scene, door) is not None,
+          "with a swing symbol for the plan")
+    check(scene.mesh.is_closed(), "and the wall is still closed")
+
     # ---- scenes ----
-    made = scenes_mod.make(viewport, params.normalize({})["symbol_layer"])
+    made = scenes_mod.make(viewport, params_mod.SYMBOL_LAYER)
     equal(sorted(made), ["3D", "Elevation", "Plan"],
           "the three scenes are made")
     equal([view.name for view in scene.saved_views], list(made),
@@ -390,10 +429,10 @@ def main() -> int:
     equal(plan.hidden_layers, [],
           "a plan shows the swing symbol (its layer is not hidden)")
     three_d = next(v for v in scene.saved_views if v.name == "3D")
-    check(params.normalize({})["symbol_layer"] in three_d.hidden_layers,
+    check(params_mod.SYMBOL_LAYER in three_d.hidden_layers,
           "and a 3D view hides it")
     # Making them again replaces rather than piles up.
-    scenes_mod.make(viewport, params.normalize({})["symbol_layer"])
+    scenes_mod.make(viewport, params_mod.SYMBOL_LAYER)
     equal(len(scene.saved_views), 3, "remaking replaces, it does not stack")
 
     # ---- erasing ----
@@ -401,7 +440,7 @@ def main() -> int:
     equal([g for g in scene.groups if g.name.startswith("Door ")], [],
           "the door is gone")
     check(scene.mesh.is_closed(), "the wall is closed again")
-    equal(params.KEY not in scene.plugin_data, True,
+    equal(params_mod.KEY not in scene.plugin_data, True,
           "and the empty bookkeeping went with it")
 
     # ---- undo all the way ----
