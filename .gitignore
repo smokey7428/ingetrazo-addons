@@ -1,0 +1,16 @@
+# Upstream clones — read-only reference, refreshed with git pull.
+reference/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# macOS
+.DS_Store
+
+# Build artefacts for distribution (zips we hand to the extension manager)
+dist/
