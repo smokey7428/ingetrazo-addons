@@ -16,12 +16,22 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PY="${PYTHON:-python3}"
 
 failed=0
+checks=0
 shopt -s nullglob
 for test in "$ROOT"/dev/schema/test_*.py "$ROOT"/dev/tests/test_*.py; do
   echo "== $(basename "$test")"
-  if ! "$PY" "$test"; then
+  # Capture so the total is counted from what the tests themselves report,
+  # rather than from a number in the README that goes stale the moment a test
+  # is added. (It did.)
+  if output="$("$PY" "$test" 2>&1)"; then
+    printf '%s\n' "$output"
+  else
+    printf '%s\n' "$output" >&2
     failed=$((failed + 1))
   fi
+  found="$(printf '%s\n' "$output" \
+    | sed -n 's/.*ok (\([0-9][0-9]*\) checks).*/\1/p' | tail -1)"
+  checks=$((checks + ${found:-0}))
 done
 
 find "$ROOT/dev" "$ROOT/extensions" -name '__pycache__' -type d \
@@ -31,4 +41,4 @@ if [ "$failed" -gt 0 ]; then
   echo "$failed test file(s) failed." >&2
   exit 1
 fi
-echo "all tests pass."
+echo "all tests pass — $checks checks."
