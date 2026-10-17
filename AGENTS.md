@@ -313,23 +313,44 @@ its symbol behind — hence a "Refresh plan symbols" command.
 | --- | --- |
 | `params.py` | The parameters and what they mean: defaults, tolerant `normalize()` (an unreadable number falls back rather than raising — a door that cannot be rebuilt because one value went bad is worse than a door at 90°), honest `validate()`, and the hinge/swing sign algebra in one place. |
 | `geometry.py` | Every part as plain `(x, y, z)` faces — `Frame`, `Leaf`, `Threshold`, `Handle` — plus the swing arc and the opening outline. Pure: no Qt, no scene, no application imports, so the whole of it is testable. One `prism(outline, holes, start, end, plane)` builds a closed solid and orients every face outward. |
+| `opening.py` | The frame a door is built in (`axes`), where the opening goes (`plan`), the four reveals (`reveal_quads`), and cutting and closing the wall. |
+| `object.py` | The door as a document object: `create` / `rebuild` / `erase`, the bookkeeping in `plugin_data`, the parts as nested groups of one pose, the swing symbol as its own top-level group, and `DoorCommand` — one user action, one undo step. |
+| `host.py` | The guarded private-API shim for registering and activating an interactive tool. |
 
 Coordinates: **x** along the wall (0 at the left jamb), **y** into the wall
 (0 on the clicked face), **z** up (0 on the floor).
 
-`dev/tests/test_openings_geometry.py` (132 checks) proves each part is a closed
-solid with a **positive volume** — the same test `core/bim.py` uses before it
-will report a volume — that the volumes match the arithmetic, that the leaf
-turns correctly for all four handing/swing combinations at exact angles, and
-that the arc sits on the hinge at the leaf's radius.
+The tests prove each part is a closed solid with a **positive volume** — the
+same test `core/bim.py` uses before it will report a volume — that the volumes
+match the arithmetic, that the leaf turns correctly for all four handing/swing
+combinations at exact angles, that the arc sits on the hinge at the leaf's
+radius, and that **the wall around an opening is still a closed solid** and
+comes back exactly on undo.
+
+### The one place we deliberately differ from Windowizer
+
+Windowizer **removes** the face you select, and that only closes up because
+its workflow makes you draw a rectangle *on* the wall first, so the wall's own
+face already has a hole where the rectangle is. A door cut into the wall's own
+face cannot work that way: remove that face and the front rim of the opening
+is left open, so the wall stops being a closed solid and silently loses its
+volume in the take-off.
+
+So `cut()` **punches a hole** in the host face (and one in the far face) and
+joins the two rims with the reveals. Same result, but a door can be cut
+anywhere on a wall face, and the wall's own face keeps its identity, its
+attrs and its layer. Closing is symmetric: drop the four reveals, fill the two
+holes.
+
+Both rims are found again **by the corners of their holes**, never by holding a
+face object: a face cannot be saved in the document, and after an undo it is
+not the same object anyway.
 
 ### Still to build
 
-`opening.py` (cut and close the host wall), `object.py` (create/rebuild/erase
-plus the one-undo-step `Command` and the uid→record registry), `tool.py` (the
-interactive tool), `host.py` (the guarded private-API shim), `panel.py` (the
-parameters panel), `scenes.py` (the layers and the three scenes), and
-`__init__.py`.
+`tool.py` (click a wall to place a door), `panel.py` (the parameters panel),
+`scenes.py` (the three scenes that make the symbol show in plan and not in
+3D), and `__init__.py`.
 
 **The extension is deliberately not installable yet**: `install.sh` and
 `check.sh` both skip a directory with no `__init__.py`, so nothing half-built can

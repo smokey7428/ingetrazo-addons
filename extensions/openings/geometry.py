@@ -67,6 +67,11 @@ def _oriented(loop, want):
     return list(reversed(loop)) if _dot(_newell(loop), want) < 0 else list(loop)
 
 
+#: Public name: a caller outside this module (the wall opening, which has to
+#: orient the reveals it adds to a wall) needs the same guarantee.
+oriented = _oriented
+
+
 def _oriented_against(loop, want):
     """``loop`` wound so its normal runs against ``want`` — how a hole in a
     face is wound, so the two are not coplanar-but-contradictory."""
