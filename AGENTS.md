@@ -452,5 +452,23 @@ classification data to a user should name buildingSMART.
   own children parentless, so they linger as stray top-level windows. Put
   everything in the host as a widget, and `deleteLater()` it; do not reparent to
   `None`.
+* **An extension's own edits must put its tab back in front.** Editing notifies
+  the whole window — every tray refreshes — and in a tabbed tray another panel's
+  tab can end up in front of the field the user is about to fill in next. So an
+  editing panel re-raises its own dock after a write (`app.show_panel(dock)`),
+  but only while that dock is still visible, so a panel the user closed from
+  Window ▸ Panels is not resurrected. No code in the app raises a dock on a scene
+  change, so when it happens it is Qt's own tab handling — which is why the fix is
+  to be explicit about it rather than to hunt a culprit.
+* **`add_menu_action` does not check the app's own shortcuts**, only the ones
+  other *extensions* took (`_ext_taken_keys`). Asking for one the app already has
+  makes both ambiguous. In 0.5.8 the taken `Ctrl+Shift+<letter>` keys are
+  **A C G H I N P V Z** — refresh with
+  `grep -rhoE '"Ctrl\+Shift\+[A-Za-z]"' views/ core/ | sort -u`.
+* A panel that follows the selection should **not rebuild the form when nothing
+  it shows has changed**. A rebuild destroys the widget the user is typing in, and
+  Qt hands the focus on — which in a tabbed tray means another panel's tab. Compare
+  a signature of the record and rebuild only when it differs; set that signature
+  around our own writes so the notification they cause does not rebuild.
 * A stub that is *wrong* hides real bugs as effectively as real code: the
   class-change rebuild looked broken until `takeAt` was stubbed to Qt's shape.

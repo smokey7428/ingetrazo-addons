@@ -191,6 +191,8 @@ class IfcEditorPanel(QWidget):
     def __init__(self, app) -> None:
         super().__init__()
         self._app = app
+        #: Our own dock, attached by ``setup`` — see :meth:`_keep_in_front`.
+        self._dock = None
         #: The JSON of what is on screen. Rebuild only when it changes: our own
         #: edits notify synchronously, and a rebuild mid-typing would steal the
         #: focus out of the field being typed into.
@@ -298,6 +300,27 @@ class IfcEditorPanel(QWidget):
         scene = self._app.scene
         entity = self._pick(scene)
         return store.record(scene, entity) if entity is not None else None
+
+    def attach_dock(self, dock) -> None:
+        """Remember the tab this panel lives in, so an edit can come back to
+        the front (see :meth:`_keep_in_front`)."""
+        self._dock = dock
+
+    def _keep_in_front(self) -> None:
+        """Bring our own tab back to the front after our own write.
+
+        Editing here changes the document, and that notifies the whole window:
+        the other trays refresh too, and in a tabbed tray that can leave
+        another panel's tab in front — which is the one thing an editing panel
+        must not do, since the next thing the user does is edit the next field.
+
+        Only when our own tab is still open: a panel the user closed from
+        Window ▸ Panels stays closed.
+        """
+        dock = self._dock
+        if dock is None or not dock.isVisible():
+            return
+        self._app.show_panel(dock)
 
     # ---- the refresh loop ---------------------------------------------------
     def refresh(self) -> None:
@@ -728,3 +751,5 @@ class IfcEditorPanel(QWidget):
         if "ifc_class" in changes or "schema" in changes:
             self._signature = None
             self.refresh()
+        # Last, so nothing the rebuild did can leave another tab in front.
+        self._keep_in_front()

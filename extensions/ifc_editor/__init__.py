@@ -70,11 +70,17 @@ def setup(app) -> None:
 
     panel = IfcEditorPanel(app)
     dock = app.add_panel(_t("IFC"), panel)
+    panel.attach_dock(dock)
 
     # A panel with a menu entry can be brought back after being hidden in
     # Window ▸ Panels; the panel also carries the class picker, so this is how
     # people will find it.
+    #
+    # Ctrl+Shift+F, and NOT Ctrl+Shift+I: add_menu_action only refuses a
+    # shortcut another EXTENSION took, so the app's own are not checked and a
+    # clash silently makes both ambiguous. In 0.5.8 Ctrl+Shift+I is already
+    # Edit ▸ Invert Selection; taken letters are A C G H I N P V Z.
     app.add_menu_action(
-        _t("IFC fields"), lambda: app.show_panel(dock), shortcut="Ctrl+Shift+I",
+        _t("IFC fields"), lambda: app.show_panel(dock), shortcut="Ctrl+Shift+F",
         tip=_t("Edit every attribute and property set of the selected IFC "
                "object."))

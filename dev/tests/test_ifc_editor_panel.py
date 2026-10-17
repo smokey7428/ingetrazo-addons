@@ -154,6 +154,20 @@ class Viewport:
         self.updates += 1
 
 
+class FakeDock:
+    """A dock widget: visible until hidden, as a tabbed dock is."""
+
+    def __init__(self, title, widget, name=None):
+        self.title, self.widget, self.name = title, widget, name
+        self._visible = True
+
+    def isVisible(self) -> bool:
+        return self._visible
+
+    def objectName(self) -> str:
+        return "extension_ifc_editor"
+
+
 class FakeApp:
     """What :meth:`ExtensionApp` offers, recorded."""
 
@@ -162,14 +176,14 @@ class FakeApp:
         self.key = "ifc_editor"
         self.panels: dict = {}
         self.menu_actions: list = []
+        self.shown = None
         self._on_changed: list = []
 
     def on_document_changed(self, fn) -> None:
         self._on_changed.append(fn)
 
     def add_panel(self, title, widget, name=None, **kw):
-        dock = __import__("types").SimpleNamespace(title=title, widget=widget,
-                                                   name=name)
+        dock = FakeDock(title, widget, name)
         self.panels[title] = dock
         return dock
 
@@ -262,7 +276,14 @@ def main() -> int:
     equal(list(app.panels), ["IFC"], "setup adds one panel, titled IFC")
     equal(len(app.menu_actions), 1, "and one Extensions-menu entry")
     text, _fn, shortcut, tip = app.menu_actions[0]
-    check(shortcut == "Ctrl+Shift+I", f"the menu shortcut: {shortcut!r}")
+    # The app's own shortcuts are NOT checked by add_menu_action, so a clash
+    # here makes both the app's action and ours ambiguous. Refresh this list
+    # with:  grep -rhoE '"Ctrl\+Shift\+[A-Za-z]"' views/ core/ | sort -u
+    taken_by_the_app = {"Ctrl+Shift+A", "Ctrl+Shift+C", "Ctrl+Shift+G",
+                        "Ctrl+Shift+H", "Ctrl+Shift+I", "Ctrl+Shift+N",
+                        "Ctrl+Shift+P", "Ctrl+Shift+V", "Ctrl+Shift+Z"}
+    check(shortcut not in taken_by_the_app,
+          f"the menu shortcut {shortcut!r} is already the app's own")
     check(bool(tip), "the menu entry carries a tip for the status bar and F3")
     panel = app.panels["IFC"].widget
 
@@ -330,10 +351,29 @@ def main() -> int:
     version = scene.version
     editor = _editor_named(panel, "Tag")
     check(editor is not None, "the Tag attribute should have an editor")
+    # A plain field edit must NOT rebuild the form: rebuilding destroys the
+    # widget the user is in, and Qt hands the focus to whatever comes next —
+    # in a tabbed tray, another panel's widget, and with it that panel's tab.
+    widgets_before = id(panel._field_getters)
     check(_type_into(editor, "W-01"), "the Tag editor is a text field")
+    equal(id(panel._field_getters), widgets_before,
+          "a plain edit keeps the form it is editing")
     equal(store.record(scene, wall)["fields"].get("Tag"), "W-01",
           "the typed Tag is stored")
     equal(scene.version, version + 1, "and it was one undo step")
+
+    # The tab we live in has to stay in front. Editing notifies the whole
+    # window — every tray refreshes — and in a tabbed tray another panel's tab
+    # can end up in front of the field the user is about to fill in next.
+    equal(app.shown, app.panels["IFC"], "an edit brings our own tab back")
+
+    # But a panel the user closed from Window ▸ Panels stays closed.
+    dock = app.panels["IFC"]
+    dock._visible = False
+    app.shown = None
+    _type_into(_editor_named(panel, "Description"), "a load-bearing wall")
+    equal(app.shown, None, "a closed panel is not resurrected by an edit")
+    dock._visible = True
 
     # A second edit must not clobber the first.
     name_editor = panel._name_edit
