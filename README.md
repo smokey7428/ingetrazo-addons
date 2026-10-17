@@ -76,11 +76,12 @@ Two rules worth repeating:
 
 | | |
 | --- | --- |
-| `extensions/ifc_editor/` | The IFC attribute/property editor — **in progress**. Its schema tables (776 IFC4 entities, 513 property sets; 653 IFC2X3 entities, 317 sets) are generated and verified; the editing UI and the `.ifc` writer are next. See [`dev/schema/README.md`](dev/schema/README.md). |
+| `extensions/ifc_editor/` | The IFC attribute/property editor. **Built:** the schema tables (776 IFC4 entities, 513 property sets; 653 IFC2X3 entities, 317 sets), the trait panel that follows the selection, per-element storage, and undoable edits. **Next:** its own `.ifc` writer, so the edited fields reach a file — see [`AGENTS.md`](AGENTS.md). |
 | `extensions/hello_ingetrazo.py` | Smoke test that proves the toolchain (menu entry, tray panel, document data, model counting). Safe to delete once a real extension exists. |
 
 ```bash
+./dev/check.sh                   # compile + contract + schema-table check
+./dev/test.sh                    # the tests (no IngeTrazo, no PySide6 needed)
 ./dev/schema/fetch.sh            # once: buildingSMART schemas + property sets
 python3 dev/schema/generate.py   # rebuild the shipped tables
-python3 dev/schema/test_tables.py
 ```

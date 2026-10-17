@@ -77,12 +77,17 @@ ATTRIBUTION = (
 
 
 # ---- entities ---------------------------------------------------------------
-def _attribute_entry(schema: express.Schema, attr: express.Attribute) -> dict:
-    """One attribute as the extension wants to see it."""
+def _attribute_entry(schema: express.Schema, attr: express.Attribute,
+                      owner: str) -> dict:
+    """One attribute as the extension wants to see it.
+
+    ``owner`` is the entity being described: an attribute declared on it needs
+    no ``inherited_from``, one that came down the chain does.
+    """
     entry: dict = {"name": attr.name, "type": attr.type}
     if attr.optional:
         entry["optional"] = True
-    if attr.inherited_from:
+    if attr.inherited_from and attr.inherited_from != owner:
         entry["inherited_from"] = attr.inherited_from
 
     enum = schema.enum_values(attr.type)
@@ -105,7 +110,7 @@ def build_entities(schema: express.Schema) -> dict:
             entry["supertype"] = entity.supertype
         if entity.abstract:
             entry["abstract"] = True
-        attributes = [_attribute_entry(schema, a)
+        attributes = [_attribute_entry(schema, a, name)
                       for a in schema.all_attributes(name)]
         entry["attributes"] = attributes
 

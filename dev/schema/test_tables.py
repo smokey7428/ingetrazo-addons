@@ -89,6 +89,17 @@ def test_ifc4(table: dict) -> None:
           f"IFC4 IfcDoor should carry OverallHeight/OverallWidth at 9-10, "
           f"got {door[8:10]}")
 
+    # The declaring entity has to be recorded, or a form cannot group its
+    # fields by IfcRoot / IfcObject / IfcElement / the entity's own.
+    global_id = table["entities"]["IfcWall"]["attributes"][0]
+    check(global_id.get("inherited_from") == "IfcRoot",
+          f"GlobalId should be marked as declared on IfcRoot, got "
+          f"{global_id.get('inherited_from')!r}")
+    predefined = next(a for a in table["entities"]["IfcWall"]["attributes"]
+                      if a["name"] == "PredefinedType")
+    check("inherited_from" not in predefined,
+          "an entity's own attribute must not be marked as inherited")
+
     wall = table["psets"].get("Pset_WallCommon", {})
     check(wall.get("applicable") == ["IfcWall"],
           f"IFC4 Pset_WallCommon applies to {wall.get('applicable')!r}")
@@ -161,6 +172,9 @@ def test_integrity(stem: str, table: dict) -> None:
                 check(origin in entities,
                       f"{stem}: {entity_name}.{attribute['name']} claims to "
                       f"come from unknown {origin!r}")
+                check(origin != entity_name,
+                      f"{stem}: {entity_name}.{attribute['name']} is marked "
+                      f"as inherited from itself")
             for word in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", attribute["type"]):
                 if word.upper() in KEYWORDS:
                     continue

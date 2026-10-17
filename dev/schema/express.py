@@ -162,14 +162,21 @@ class Schema:
     # ---- queries -----------------------------------------------------------
     def all_attributes(self, name: str) -> list[Attribute]:
         """``name``'s explicit attributes in declaration order: inherited
-        first, then its own — the order IFC writes them in a STEP file."""
+        first, then its own — the order IFC writes them in a STEP file.
+
+        Each attribute records the entity it was *declared on* in
+        ``inherited_from``, this entity included. A caller describing
+        ``IfcWall`` can therefore tell GlobalId (from IfcRoot) apart from
+        PredefinedType (its own), and group a form by declaring entity.
+        """
         entity = self.entities.get(name)
         if entity is None:
             return []
         out: list[Attribute] = []
         if entity.supertype:
             out.extend(self.all_attributes(entity.supertype))
-        out.extend(entity.own_attributes)
+        out.extend(Attribute(attr.name, attr.type, attr.optional, name)
+                   for attr in entity.own_attributes)
         return out
 
     def is_subtype_of(self, name: str, ancestor: str) -> bool:

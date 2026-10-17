@@ -36,38 +36,52 @@ def _looks_like_tool(node: ast.ClassDef) -> bool:
                for base in node.bases)
 
 
+def _modules_of(path: Path) -> list[Path]:
+    """The Python files to look at: the file itself, or a package's modules.
+
+    ``__init__.py`` is where a package's ``setup(app)`` lives, so for a package
+    it is the first module despite the leading underscores that mark private
+    loose files.
+    """
+    if path.is_file():
+        return [path]
+    modules = [path / "__init__.py"]
+    modules += [p for p in sorted(path.rglob("*.py"))
+                if p.name != "__init__.py"
+                and not any(part.startswith(("_", ".")) for part in p.parts
+                            if part != path.name)]
+    return [m for m in modules if m.is_file()]
+
+
 def check(path: Path) -> list[str]:
     problems: list[str] = []
     stem = path.stem if path.is_file() else path.name
 
+    if not STEM_RE.match(stem):
+        problems.append(f"name {stem!r}: use lowercase letters, digits and _")
+
     if path.is_file():
-        if not STEM_RE.match(stem):
-            problems.append(f"name {stem!r}: use lowercase letters, digits and _")
         source = path.read_text(encoding="utf-8")
-        tree = ast.parse(source, filename=str(path))       # SyntaxError -> caller
         first = source.splitlines()[0] if source.splitlines() else ""
         if "SPDX-License-Identifier" not in first:
             problems.append("first line is not an SPDX-License-Identifier header")
-        if ast.get_docstring(tree, clean=False) is None:
+        if ast.get_docstring(ast.parse(source, filename=str(path)),
+                             clean=False) is None:
             problems.append("no module docstring (say what it does and which "
                             "IngeTrazo version it was tested with)")
-    else:
-        source = ""
-        tree = None
 
-    modules = [path] if path.is_file() else sorted(p for p in path.glob("*.py")
-                                                   if not p.name.startswith("_"))
     tools, setups = [], []
-    for module in modules:
-        tree = tree if path.is_file() and module is path else ast.parse(
-            module.read_text(encoding="utf-8"), filename=str(module))
+    for module in _modules_of(path):
+        tree = ast.parse(module.read_text(encoding="utf-8"),
+                         filename=str(module))
         for node in tree.body:
             if isinstance(node, ast.ClassDef) and _looks_like_tool(node):
                 tools.append(node.name)
             elif isinstance(node, ast.FunctionDef) and node.name == "setup":
                 args = node.args.args
                 if len(args) != 1:
-                    problems.append("setup() must take exactly the app argument")
+                    problems.append(f"{module.name}: setup() must take exactly "
+                                    f"the app argument")
                 else:
                     setups.append(node.name)
 

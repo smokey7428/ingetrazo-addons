@@ -24,11 +24,18 @@ for path in "$ROOT"/extensions/*.py "$ROOT"/extensions/*/; do
   case "$path" in
     */_*) continue ;;
   esac
+  # A package is one extension made of several files; a loose file is one file.
+  files=()
   if [ -d "$path" ]; then
     [ -f "${path}__init__.py" ] || continue
+    while IFS= read -r module; do
+      files+=("$module")
+    done < <(find "$path" -name '*.py' -not -path '*/__pycache__/*' | sort)
+  else
+    files=("$path")
   fi
   checked=$((checked + 1))
-  if "$PY" -m py_compile "$path"; then
+  if "$PY" -m py_compile "${files[@]}"; then
     echo "  ok   $(basename "$path")"
   else
     failed=$((failed + 1))

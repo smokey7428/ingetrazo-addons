@@ -28,14 +28,19 @@ Ingetrazo/
 ├── AGENTS.md            # this file
 ├── README.md
 ├── extensions/          # OUR add-ons — one .py file or one package dir each
-│   └── ifc_editor/          # the IFC field/property editor (in progress)
-│       ├── __init__.py
-│       └── data/            # generated schema tables, ~150 KB each, committed
+│   └── ifc_editor/          # the IFC field/property editor
+│       ├── __init__.py      # setup(app): the panel + the Extensions-menu entry
+│       ├── schema.py        # the schema tables, and the questions asked of them
+│       ├── store.py         # identity, per-element storage, the undo command
+│       ├── panel.py         # the tray panel that follows the selection
+│       └── data/            # generated schema tables, ~160 KB each, committed
 ├── dev/
 │   ├── install.sh       # symlink extensions/* into IngeTrazo's plugin folder
 │   ├── uninstall.sh     # remove only OUR symlinks
 │   ├── check.sh         # compile + contract-check + schema-table check
+│   ├── test.sh          # run every test in dev/schema and dev/tests
 │   ├── lint.py          # "does it register anything?" — AST check, run by check.sh
+│   ├── tests/           # extension tests, with stubs for core.* and PySide6
 │   └── schema/          # IFC schema tables: fetch, generate, test (see its README)
 └── reference/           # shallow clones of upstream (gitignored, read-only)
     ├── ingetrazo/            # app source — the API ground truth
@@ -79,6 +84,7 @@ Extensions are scanned **once, at startup**, so there is no hot reload.
 ./dev/install.sh          # symlink extensions/* into the plugin folder
                           # → then quit and reopen IngeTrazo, or Ctrl+Q / relaunch
 ./dev/check.sh            # byte-compile + contract-check before restarting
+./dev/test.sh             # run the tests (no IngeTrazo, no PySide6 needed)
 ```
 
 Editing a symlinked file takes effect on the next launch only. There is **no
@@ -162,17 +168,51 @@ buildingSMART's own sources by `dev/schema/`. Read
 `./dev/check.sh`.
 
 Coverage: **776 IFC4 entities, 513 property/quantity sets, every defined type;
-653 IFC2X3 entities, 317 sets.** ~150 KB gzipped each. Verified for
+653 IFC2X3 entities, 317 sets.** ~160 KB gzipped each. Verified for
 referential integrity — every attribute type and every pset's applicable
 entity resolves.
 
+### The extension — built
+
+| File | What it is |
+| --- | --- |
+| `schema.py` | Loads a table (lazily, cached), and answers: a class's attributes in IFC order, whether an entity is a subtype of another, which property sets apply to a class (resolving inheritance *and* the `/PREDEFINEDTYPE` filter), and what kind of value a declared type holds so the right editor can be chosen. |
+| `store.py` | Identity, storage and the one command. |
+| `panel.py` | The tray tab: schema, a filterable picker over every entity, Name, the class's attributes grouped by declaring entity, every applicable `Pset_*`, custom sets, and read-only measured quantities. |
+| `__init__.py` | `setup(app)`: the panel and an Extensions-menu entry (`Ctrl+Shift+I`). |
+
+**Two storages, on purpose.** The **class and name stay in IngeTrazo's own BIM
+tag** (`face.attrs["ifc"]`, `group.ifc`) so the BIM panel, the take-off, the CSV
+bridge and the core's export never disagree with what our panel shows.
+Everything else — description, object type, tag, global id, predefined type,
+property sets, your own sets — is ours, in `scene.plugin_data["ifc_editor"]`.
+The core has nowhere to put those: it writes them as `$`.
+
+**One edit is one undo step.** `store.EditIfcObject` writes both storages in a
+single command and restores both on undo. Going through `set_document_data`
+would have been a second step, and `History.undo` does **not** restore the mesh
+snapshot — that is only the rollback on failure — so a command has to own its
+inverse.
+
+**Identity**: `uid:<group.uid>` for a tagged group, `ifc:<tag id>` for loose
+faces, re-resolved from the scene at write time rather than held as a
+reference.
+
 ### Still to build
 
-The editing UI and the writer: a tray panel that follows the selection (pick an
-element → edit its class, Name, Description, ObjectType, Tag, PredefinedType,
-its `Pset_*` values, and add custom properties), the per-element storage in
-`app.document_data` keyed by `group.uid` / the face tag id, and an *Export IFC
-(full)* menu action writing an `.ifc` that carries all of it.
+**Our own `.ifc` writer.** Until it exists, the fields edited here are saved in
+the document but the core's *File ▸ Export IFC* still writes only class, name,
+geometry and `Qto_*` — so the extension's data does not yet reach a file. That
+writer is the remaining half of the brief and the next piece of work: a
+menu action that writes IFC4/IFC2X3 carrying every attribute and property set,
+per class, with the real STEP attribute layout (doors and windows take
+OverallHeight/OverallWidth in the middle of theirs, `IfcSpace` has `LongName`
+where others have `Tag`). `formats/ifc.py` in the core is the reference for the
+geometry and the `Qto_*` sets; the tables tell us the rest.
+
+Also worth adding later: tagging untagged geometry from this panel (the class
+picker reaches 155 product classes, the core's BIM panel only 16), and reading
+an existing `.ifc` back in.
 
 ## Plugin API — the essentials (0.5.8 / API_VERSION 2)
 
@@ -383,3 +423,27 @@ classification data to a user should name buildingSMART.
   placement.
 * `start_hidden=True` without an Extensions-menu action is a panel nobody can
   find — always pair it with `add_menu_action`.
+* **`History.undo` does not restore the mesh snapshot.** Only a *failed*
+  command gets that (`History.execute`'s rollback). Every command must implement
+  its own inverse, and anything outside the mesh (group tags, `plugin_data`,
+  layers, views) is invisible to the snapshot anyway.
+* **The core's own BIM tagging is not undoable** — `BimPanel._on_tag` calls
+  `tag_faces`/`tag_group` and then just bumps `scene.version`. Going through the
+  command layer, as `ifc_editor` does, is better than the panel it extends.
+* **A `Group` has a `uid` before it is tagged.** Keying an element on the uid
+  alone makes untagged geometry look like an IFC object; the tag is what makes it
+  one (`group.ifc`, `face.attrs["ifc"]`).
+* **An empty `plugin_data[key]` is not the same as no key.** `core/scene.py`
+  asks whether `scene.plugin_data` is empty to decide if a document has anything
+  in it, so a hollow entry left behind makes an empty document look used. Remove
+  the key when there is nothing to store — `SetPluginDataCommand` does the same.
+* **`FoldSection.body` has no layout of its own**; the caller installs one. The
+  idiom is `wrapping_form(section.body)`, which puts labels above fields when the
+  tray is narrow.
+* **A panel that follows the selection must distinguish the states that are not
+  a record** — "nothing selected" and "selected, but not an IFC object" show
+  different things. A signature of "the record or None" collapses them, and the
+  second never refreshes.
+* **PySide6 cannot be imported from the app bundle outside the frozen app**:
+  shiboken's bootstrap fails on a missing path. Headless tests therefore stub Qt
+  (`dev/tests/qt_stubs.py`) — which exercises logic, not looks.
