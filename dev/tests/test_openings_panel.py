@@ -118,6 +118,10 @@ class FakeViewport:
         self.messages: list = []
         self.picked_face = None
         self.picked_point = None
+        #: What ``pick_face_any`` finds when ``pick_face`` finds nothing — a
+        #: face that belongs to a group, which is the one case worth telling
+        #: the user about.
+        self.behind_face = None
 
     def _set_view(self, name: str) -> None:
         self.camera.yaw, self.camera.pitch = {"top": (0.0, 1.57),
@@ -135,6 +139,11 @@ class FakeViewport:
 
     def pick_face(self, x, y):
         return self.picked_face
+
+    def pick_face_any(self, x, y):
+        if self.behind_face is None:
+            return None, None
+        return self.behind_face, "a group"
 
     def _world_under_cursor(self, x, y):
         return self.picked_point
@@ -351,6 +360,30 @@ def main() -> int:
     check("Frame" in [k.name for k in door.children],
           "with its parts")
     check(scene.mesh.is_closed(), "and the wall is still closed")
+
+    # ---- a wall inside a group: the tool must say so, not go quiet ----
+    viewport.picked_face = None
+    viewport.picked_point = None
+    viewport.behind_face = "a face of a grouped wall"
+    viewport.messages.clear()
+    tool.on_hover(context(viewport, app_stubs.QVector3D(2.0, 0.0, 1.0)))
+    check(viewport.messages, "hovering a grouped wall says something")
+    check("inside a group" in viewport.messages[-1],
+          f"and it says what to do about it: {viewport.messages[-1]!r}")
+    check(tool.preview_faces() == [],
+          "with no preview, because there is nothing to cut yet")
+
+    # Nothing at all under the cursor: the click explains that too.
+    viewport.behind_face = None
+    viewport.messages.clear()
+    tool.on_click(context(viewport, app_stubs.QVector3D(0.0, 0.0, 0.0)))
+    check(viewport.messages, "a click on nothing says something")
+    check("Point at a face" in viewport.messages[-1],
+          f"and it says where to point: {viewport.messages[-1]!r}")
+
+    # Put the wall back under the cursor for the rest of the test.
+    viewport.picked_face = front_face(scene)
+    viewport.picked_point = app_stubs.QVector3D(2.0, 0.0, 1.0)
 
     # ---- the panel shows the door it just placed ----
     equal(panel._item, door, "the panel followed the new door")

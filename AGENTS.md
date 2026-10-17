@@ -374,6 +374,20 @@ The panel's **kind and type** convert the opening in front of you, like every
 other field — so a door can be turned into a window in one undo step, and a vast
 raam into a draairaam (which keeps the size and adds the sash).
 
+### A wall inside a group cannot be cut
+
+``Viewport.pick_face`` answers with **loose** geometry only — its docstring
+filters ``ent_loose`` — so a face that belongs to a group is invisible to it.
+That is the platform's own rule, not ours: Push/Pull likewise refuses a face
+inside a container "until the group is opened". So the tool works on loose
+walls, or on a wall whose group is **open for editing** (then its own faces are
+the loose part), and refuses otherwise.
+
+The lesson that cost a round trip with the user: **a tool that picks nothing and
+says nothing is unusable.** The hover now uses ``pick_face_any`` — which does see
+group-owned faces — purely to tell the two empty cases apart, and reports the
+group one with the instructions: double-click into the group, or explode it.
+
 ### One limitation, and one still to build
 
 Two openings in the same wall face **must not share a jamb edge**: their holes

@@ -57,6 +57,19 @@ _TEXTS = {
             "Devuelve el símbolo de barrido de cada puerta a donde está ahora "
             "la puerta.",
         "Doors — plan": "Puertas — planta",
+        "Point at a face of a wall and click to place the opening. The wall "
+        "must not be inside a group. Esc when you are done.":
+            "Apunta a una cara de un muro y haz clic para colocar el hueco. El "
+            "muro no puede estar dentro de un grupo. Esc para terminar.",
+        "That face is inside a group, and a group's geometry cannot be cut "
+        "until it is open. Double-click into the group and place the door "
+        "inside it, or explode the group first.":
+            "Esa cara está dentro de un grupo, y la geometría de un grupo no "
+            "se puede cortar hasta abrirlo. Haz doble clic para entrar en el "
+            "grupo y coloca la puerta dentro, o desagrupa primero.",
+        "Point at a face of the wall you want the door or window in.":
+            "Apunta a una cara del muro donde quieras la puerta o ventana.",
+        "Placed": "Colocado",
     },
 }
 
