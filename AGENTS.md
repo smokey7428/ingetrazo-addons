@@ -38,9 +38,15 @@ Ingetrazo/
 │   │   ├── store.py         # identity, per-element storage, the undo command
 │   │   ├── panel.py         # the tray panel that follows the selection
 │   │   └── data/            # generated schema tables, ~160 KB each, committed
-│   └── openings/            # parametric doors/windows (under construction)
+│   └── openings/            # parametric doors, cut into walls by clicking
 │       ├── params.py        # the parameters and what they mean
-│       └── geometry.py      # every part, as plain coordinates — no Qt
+│       ├── geometry.py      # every part, as plain coordinates — no Qt
+│       ├── opening.py       # where the opening goes, and cutting the wall
+│       ├── object.py        # the door as a document object + its command
+│       ├── host.py          # the guarded private-API shim (tool registration)
+│       ├── tool.py          # click a wall to place a door
+│       ├── panel.py         # the Doors tab
+│       └── scenes.py        # Plan / Elevation / 3D, so the symbol shows
 ├── dev/
 │   ├── install.sh       # symlink extensions/* into IngeTrazo's plugin folder
 │   ├── uninstall.sh     # remove only OUR symlinks
@@ -307,25 +313,39 @@ Design that follows: the door is real geometry; the arc is a real polyline on a
 which an extension can do. And they inherit the wart that a *moved* door leaves
 its symbol behind — hence a "Refresh plan symbols" command.
 
-### Built so far
+### Built — complete
 
 | File | What it is |
 | --- | --- |
 | `params.py` | The parameters and what they mean: defaults, tolerant `normalize()` (an unreadable number falls back rather than raising — a door that cannot be rebuilt because one value went bad is worse than a door at 90°), honest `validate()`, and the hinge/swing sign algebra in one place. |
 | `geometry.py` | Every part as plain `(x, y, z)` faces — `Frame`, `Leaf`, `Threshold`, `Handle` — plus the swing arc and the opening outline. Pure: no Qt, no scene, no application imports, so the whole of it is testable. One `prism(outline, holes, start, end, plane)` builds a closed solid and orients every face outward. |
-| `opening.py` | The frame a door is built in (`axes`), where the opening goes (`plan`), the four reveals (`reveal_quads`), and cutting and closing the wall. |
-| `object.py` | The door as a document object: `create` / `rebuild` / `erase`, the bookkeeping in `plugin_data`, the parts as nested groups of one pose, the swing symbol as its own top-level group, and `DoorCommand` — one user action, one undo step. |
-| `host.py` | The guarded private-API shim for registering and activating an interactive tool. |
+| `opening.py` | The frame a door is built in (`axes`), where the opening goes (`plan`), the four reveals, and cutting and closing the wall. |
+| `object.py` | The door as a document object: `create` / `rebuild` / `erase`, `preview` for the tool, the bookkeeping in `plugin_data`, the parts as nested groups of one pose, the swing symbol as its own top-level group, and `DoorCommand` — one user action, one undo step. |
+| `host.py` | The guarded private-API shim: registering and activating an interactive tool, and reading the point under the cursor. Says why, and refuses gracefully. |
+| `tool.py` | `DoorTool` — click a wall, see the door previewed, click to cut it. Stays active so a plan can be worked through. |
+| `panel.py` | The **Doors** tab: the settings for the next door with nothing selected, or the selected door's parameters, rebuilding it where it stands. Changes are coalesced on a short timer — one undo step per settled change, not per arrow key. |
+| `scenes.py` | The Plan / Elevation / 3D scenes, and `refresh` to put a moved door's symbol back. |
+| `__init__.py` | `setup(app)`: panel, tool, its own submenu, a right-click entry and the Browser's Type column. |
 
 Coordinates: **x** along the wall (0 at the left jamb), **y** into the wall
 (0 on the clicked face), **z** up (0 on the floor).
 
-The tests prove each part is a closed solid with a **positive volume** — the
-same test `core/bim.py` uses before it will report a volume — that the volumes
-match the arithmetic, that the leaf turns correctly for all four handing/swing
+Tests: **243 checks** across `test_openings_geometry.py` (132),
+`test_openings_object.py` (73) and `test_openings_panel.py` (38). They prove
+each part is a closed solid with a **positive volume** — the same test
+`core/bim.py` uses before it will report a volume — that the volumes match the
+arithmetic, that the leaf turns correctly for all four handing/swing
 combinations at exact angles, that the arc sits on the hinge at the leaf's
-radius, and that **the wall around an opening is still a closed solid** and
-comes back exactly on undo.
+radius, that **the wall around an opening is still a closed solid** and comes
+back on undo, and that the whole UI path works: the tool places from a click,
+the panel edits, the scenes are made and replaced, Erase closes the wall, and
+undo walks all of it back.
+
+### Still to build
+
+Windows (the tool that places them), a sill parameter for the same reason, and
+standard-size presets in the panel. Windows are the same machinery: the leaf,
+the lining and the arc already take a fixed/casement/slider variant.
 
 ### The one place we deliberately differ from Windowizer
 
@@ -346,15 +366,12 @@ Both rims are found again **by the corners of their holes**, never by holding a
 face object: a face cannot be saved in the document, and after an undo it is
 not the same object anyway.
 
-### Still to build
+### Installed
 
-`tool.py` (click a wall to place a door), `panel.py` (the parameters panel),
-`scenes.py` (the three scenes that make the symbol show in plan and not in
-3D), and `__init__.py`.
-
-**The extension is deliberately not installable yet**: `install.sh` and
-`check.sh` both skip a directory with no `__init__.py`, so nothing half-built can
-reach the application.
+`./dev/install.sh` links it; **Extensions ▸ Doors & windows**, and the **Doors**
+tab. The interactive tool registers through `host.py`, the one private-API
+dependency — that module refuses gracefully on a build that has moved those
+members, so a future IngeTrazo shows a sentence instead of a traceback.
 
 ## Plugin API — the essentials (0.5.8 / API_VERSION 2)
 

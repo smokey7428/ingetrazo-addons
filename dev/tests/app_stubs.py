@@ -409,6 +409,87 @@ def install() -> None:
     history_mod.Command = Command
     sys.modules["core.history"] = history_mod
 
+    # ---- what the panel and the scenes import ----
+    i18n = module("core.i18n", current_language=lambda: "en", tr=lambda s, **k: s)
+    sys.modules["core.i18n"] = i18n
+
+    @__import__("dataclasses").dataclass
+    class PreviewFace:
+        """``core.geometry.Face`` — the light polygon a tool previews with."""
+        vertices: list
+        holes: list
+        attrs: dict | None = None
+
+        def __init__(self, vertices=None, holes=None, attrs=None):
+            self.vertices = list(vertices or [])
+            self.holes = [list(h) for h in (holes or ())]
+            self.attrs = attrs
+
+    sys.modules["core.geometry"] = module("core.geometry", Face=PreviewFace)
+
+    saved = module("core.saved_views")
+
+    class SavedView:
+        def __init__(self, name, **state):
+            self.name = name
+            self.__dict__.update(state)
+
+        @classmethod
+        def capture(cls, name, scene, camera):
+            return cls(name,
+                       hidden_layers=[ly.name for ly in scene.layers
+                                      if not ly.visible],
+                       yaw=camera.yaw, pitch=camera.pitch,
+                       perspective=getattr(camera, "perspective", True))
+
+        def apply(self, scene, camera=None):
+            hidden = set(self.hidden_layers or ())
+            for layer in scene.layers:
+                layer.visible = layer.name not in hidden
+            if camera is not None:
+                camera.yaw, camera.pitch = self.yaw, self.pitch
+
+    saved.SavedView = SavedView
+    sys.modules["core.saved_views"] = saved
+
+    # SnapshotImport: tracks the views and layers a mutation added, so undo
+    # takes them away again — the behaviour the scenes rely on.
+    class SnapshotImport(Command):
+        def __init__(self, mutate):
+            self.mutate = mutate
+            self.before: dict | None = None
+            self.after: dict | None = None
+            self.added_views: list = []
+            self.added_layers: list = []
+
+        def do(self, scene):
+            if self.after is None:
+                views = list(scene.saved_views)
+                layers = list(scene.layers)
+                self.before = scene.mesh.capture_state()
+                self.mutate(scene)
+                self.after = scene.mesh.capture_state()
+                self.added_views = [v for v in scene.saved_views
+                                    if v not in views]
+                self.added_layers = [ly for ly in scene.layers
+                                     if ly not in layers]
+            else:
+                scene.mesh.restore_state(self.after)
+            scene.version += 1
+
+        def undo(self, scene):
+            if self.before is not None:
+                scene.mesh.restore_state(self.before)
+            for view in self.added_views:
+                if view in scene.saved_views:
+                    scene.saved_views.remove(view)
+            for layer in self.added_layers:
+                if layer in scene.layers:
+                    scene.layers.remove(layer)
+            scene.version += 1
+
+    history_mod.SnapshotImport = SnapshotImport
+
     qtgui = types.ModuleType("PySide6.QtGui")
     qtgui.QVector3D = QVector3D
     qtgui.QVector4D = QVector4D

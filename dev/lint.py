@@ -108,11 +108,15 @@ def main(argv: list[str]) -> int:
             print(f"no such path: {target}", file=sys.stderr)
             failures += 1
             continue
-        entries = [target] if target.is_file() else [
-            p for p in sorted(target.iterdir())
-            if (p.is_file() and p.suffix == ".py" and not p.name.startswith("_"))
-            or (p.is_dir() and not p.name.startswith("_")
-                and (p / "__init__.py").is_file())]
+        if target.is_file() or (target / "__init__.py").is_file():
+            entries = [target]        # a loose file, or a package: one extension
+        else:
+            entries = [
+                p for p in sorted(target.iterdir())
+                if (p.is_file() and p.suffix == ".py"
+                    and not p.name.startswith("_"))
+                or (p.is_dir() and not p.name.startswith("_")
+                    and (p / "__init__.py").is_file())]
         if not entries:
             print(f"nothing to check in {target}")
         for entry in entries:

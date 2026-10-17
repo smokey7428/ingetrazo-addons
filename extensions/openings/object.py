@@ -292,6 +292,42 @@ def create(scene, face, click: QVector3D, p: dict, name: str | None = None,
     return group
 
 
+def preview(scene, face, click, p: dict):
+    """The door as preview faces, in world metres, for a tool to draw while the
+    cursor is over a wall — the shape the click would make, before making it.
+
+    ``core.geometry.Face`` is the light polygon the renderer's preview pass
+    takes: no mesh, no topology, just what to draw. The parts come from the
+    same ``geometry.parts`` the real door is built from, so what is previewed
+    and what lands are the same thing by construction.
+    """
+    from core.geometry import Face as PreviewFace
+
+    p = params_mod.normalize(p)
+    try:
+        origin, across, into, up, depth, _corners = opening_mod.plan(
+            scene, face, click, p)
+    except opening_mod.OpeningError:
+        return []
+    matrix = frame_matrix({"origin": opening_mod.as_tuple(origin),
+                           "x": opening_mod.as_tuple(across),
+                           "y": opening_mod.as_tuple(into),
+                           "z": opening_mod.as_tuple(up)})
+    built = geometry.parts(p, depth)
+    out = []
+    for faces in built.values():
+        for loop, holes in faces:
+            out.append(PreviewFace(
+                vertices=[matrix.map(QVector3D(*q)) for q in loop],
+                holes=[[matrix.map(QVector3D(*q)) for q in h] for h in holes],
+                attrs={"color": (_PREVIEW[0], _PREVIEW[1], _PREVIEW[2])}))
+    return out
+
+
+#: The warm blue the door is drawn in while it is still only a proposal.
+_PREVIEW = (0.63, 0.67, 0.76)
+
+
 def rebuild(scene, group, p: dict) -> None:
     """New parameters, same place — read from where the door stands now."""
     data = data_of(group)

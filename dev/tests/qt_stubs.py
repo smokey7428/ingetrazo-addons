@@ -66,9 +66,19 @@ class QWidget(QObject):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.visible = True
+        self.enabled = True
         self.tooltip = ""
         self.style = ""
         self.layout = None
+
+    def setEnabled(self, on: bool) -> None:
+        self.enabled = bool(on)
+
+    def isEnabled(self) -> bool:
+        return self.enabled
+
+    def setDisabled(self, on: bool) -> None:
+        self.enabled = not on
 
     def setVisible(self, on: bool) -> None:
         self.visible = bool(on)
@@ -240,6 +250,48 @@ class QCheckBox(QWidget):
         self.toggled.emit(self._checked)
 
 
+class QDoubleSpinBox(QWidget):
+    """A number field. ``setValue`` emits, as Qt's does — the panel relies on
+    that to be told about a change it did not make, so the stub must too."""
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self._value = 0.0
+        self._low, self._high = 0.0, 100.0
+        self._decimals = 2
+        self._step = 1.0
+        self.valueChanged = Signal()
+        self.editingFinished = Signal()
+
+    def setRange(self, low: float, high: float) -> None:
+        self._low, self._high = low, high
+
+    def setDecimals(self, count: int) -> None:
+        self._decimals = count
+
+    def setSingleStep(self, step: float) -> None:
+        self._step = step
+
+    def value(self) -> float:
+        return self._value
+
+    def setValue(self, value: float) -> None:
+        value = min(max(float(value), self._low), self._high)
+        if abs(value - self._value) > 1e-12:
+            self._value = value
+            if not self._blocked:
+                self.valueChanged.emit(value)
+
+    def type_in(self, value: float) -> None:
+        """What a user typing into it does: set, and finish."""
+        self.setValue(value)
+        self.editingFinished.emit()
+
+
+class QSpinBox(QDoubleSpinBox):
+    pass
+
+
 class QPushButton(QWidget):
     def __init__(self, text: str = "", parent=None) -> None:
         super().__init__(parent)
@@ -403,6 +455,35 @@ class QFormLayout(QLayout):
 
 
 class QTimer:
+    """Both shapes the extension uses: an instance whose ``timeout`` fires
+    (``start``), and the static ``singleShot``."""
+
+    def __init__(self, parent=None) -> None:
+        self._parent = parent
+        self._single = False
+        self._msec = 0
+        self._running = False
+        self.timeout = Signal()
+
+    def setSingleShot(self, on: bool) -> None:
+        self._single = bool(on)
+
+    def start(self, msec: int) -> None:
+        self._msec = int(msec)
+        self._running = True
+
+    def stop(self) -> None:
+        self._running = False
+
+    def isActive(self) -> bool:
+        return self._running
+
+    def fire(self) -> None:
+        """What the event loop would do when the interval is up."""
+        if self._running:
+            self._running = False
+            self.timeout.emit()
+
     @staticmethod
     def singleShot(_msec, fn) -> None:
         fn()                     # run it now: no event loop in a test
@@ -437,6 +518,8 @@ def install() -> None:
                         ("QDialog", QDialog), ("QInputDialog", QInputDialog),
                         ("QDialogButtonBox", QDialogButtonBox),
                         ("QScrollArea", QScrollArea),
+                        ("QDoubleSpinBox", QDoubleSpinBox),
+                        ("QSpinBox", QSpinBox),
                         ("QVBoxLayout", QVBoxLayout),
                         ("QHBoxLayout", QHBoxLayout),
                         ("QFormLayout", QFormLayout),
@@ -483,5 +566,9 @@ def install() -> None:
     views = types.ModuleType("views")
     views.__path__ = []
     views.fold_section = fold
+    shortcuts = types.ModuleType("views.shortcuts")
+    shortcuts.set_tooltip = lambda action, tip: action.setToolTip(tip)
+    views.shortcuts = shortcuts
     sys.modules["views"] = views
     sys.modules["views.fold_section"] = fold
+    sys.modules["views.shortcuts"] = shortcuts

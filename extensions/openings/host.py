@@ -126,3 +126,24 @@ def select_tool(app) -> bool:
     means, and what a tool does when its work is done."""
     return activate(app, "select") if "select" in getattr(
         app.window, "_tools", {}) else False
+
+
+def world_under_cursor(app, x: float, y: float):
+    """The world point the cursor is over, or ``None``.
+
+    A second reach into the viewport, for the same reason as the first: it is
+    the viewport's own reading of the cursor — nearest geometry, else the
+    ground plane — which is the number the snap engine works from. Recomputing
+    it outside would be a second, worse opinion about the same pixel, and the
+    ray is built from private internals anyway, so there is nowhere honest to
+    put it but here.
+    """
+    viewport = getattr(app, "viewport", None)
+    reader = getattr(viewport, "_world_under_cursor", None)
+    if not callable(reader):
+        return None
+    try:
+        return reader(x, y)
+    except Exception:                                  # noqa: BLE001
+        log.exception("openings: could not read the point under the cursor")
+        return None
