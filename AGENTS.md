@@ -17,6 +17,10 @@ startup. No plugin SDK to install, no build step, no C++.
 * Manual (Spanish): <https://ingetrazo-docs.pages.dev>
 * Plugin guide: `reference/ingetrazo/docs/plugins.md` (authoritative — read it)
 
+**First add-on: `ifc_editor`** — full IFC attribute and property-set editing for
+tagged elements, IFC2X3 and IFC4, with its own `.ifc` writer. The brief, the
+constraints and the design are below.
+
 ## Layout of this project
 
 ```
@@ -24,11 +28,15 @@ Ingetrazo/
 ├── AGENTS.md            # this file
 ├── README.md
 ├── extensions/          # OUR add-ons — one .py file or one package dir each
+│   └── ifc_editor/          # the IFC field/property editor (in progress)
+│       ├── __init__.py
+│       └── data/            # generated schema tables, ~150 KB each, committed
 ├── dev/
 │   ├── install.sh       # symlink extensions/* into IngeTrazo's plugin folder
 │   ├── uninstall.sh     # remove only OUR symlinks
-│   ├── check.sh         # byte-compile + contract-check every extension
-│   └── lint.py          # "does it register anything?" — AST check, run by check.sh
+│   ├── check.sh         # compile + contract-check + schema-table check
+│   ├── lint.py          # "does it register anything?" — AST check, run by check.sh
+│   └── schema/          # IFC schema tables: fetch, generate, test (see its README)
 └── reference/           # shallow clones of upstream (gitignored, read-only)
     ├── ingetrazo/            # app source — the API ground truth
     └── ingetrazo-extensions/ # catalog entries (extensions/*.toml) + tooling
@@ -96,6 +104,75 @@ python main.py
 That is the only way to test against a *newer* API than the installed 0.5.8.
 The bundle's own Python is compiled in; we cannot read `core/` out of the app,
 which is why the source clone in `reference/` matters.
+
+## The first add-on: `ifc_editor`
+
+**The brief (from the user):** IngeTrazo's control over IFC data is limited.
+Add the ability to add and edit *every* available IFC schema field for a
+specific element, per IFC4 as published by buildingSMART — for **IFC2X3 and
+IFC4**, because the user's own project files are IFC2X3.
+
+**Decided:** the edited fields must reach the exported `.ifc`, and the
+extension must be **pure Python, no runtime dependency**.
+
+### Why the design is shaped the way it is — three constraints
+
+1. **There is no exporter hook.** `views/extension_api.py` offers
+   `add_file_opener` and nothing else file-related; *"Importer / exporter
+   registration"* is still on the upstream roadmap. So an extension **cannot**
+   change what *File ▸ Export IFC* writes. The core's writer
+   (`formats/ifc.py::save_ifc`) emits only GlobalId (freshly made), Name,
+   Tag, geometry and the `Qto_*` quantities — **`Description`, `ObjectType`,
+   `PredefinedType` and every `Pset_*` are hardcoded `$`**. Anything we edit
+   would be dropped unless we write our own `.ifc`. Hence the extension owns
+   its own writer.
+2. **Extensions cannot declare dependencies.** `plugin.toml` is roadmap-only,
+   nothing in the catalog installs pip packages, and the app bundle ships no
+   IFC library (`PySide6`, `numpy`, `ezdxf`, `openskp`, `manifold3d` are the
+   bundled set). A catalog extension is a `.py` or a `.zip`. So the schema
+   knowledge is reduced, offline, to tables the extension carries.
+3. **`scene.mesh` vs `scene.loose_mesh`** and the rest of the data rules below
+   still apply — and the only *stable* identities to hang per-element data on
+   are `group.uid` (16 hex chars, `core/group.py`) and, for loose-face objects,
+   `attrs["ifc"]["id"]`.
+
+### What the core offers today (the thing we are extending)
+
+* The IFC tag is **three fields**: loose faces carry
+  `attrs["ifc"] = {"id": int, "class": str, "name": str}`; groups carry
+  `group.ifc = {"class", "name"}`; `scene.active_ifc = {"class", "name"}` is
+  the tag-as-you-draw state (`core/bim.py`).
+* `views/tray.py::BimPanel` (from line 3976) is a class combo box
+  (`core.bim.IFC_CLASSES` — 16 curated classes), a name field, Tag / Untag and
+  a *Tag as you draw* checkbox. That is the whole existing IFC UI.
+* `core/bim.py` also has `class_quantities` (per-class `Qto_*` quantities,
+  volume only when the face set is watertight by itself) and `quantities_csv`.
+* Upstream's **ROADMAP item #1** is exactly this gap: *"One common BIM API for
+  extensions — how a wall, a slab or a window is tagged, **which properties it
+  carries**, and how its quantities are computed… so tools from different
+  authors fit together."* Unbuilt. We are building ahead of it: design so the
+  core can absorb this later rather than fighting it.
+
+### The schema tables — DONE
+
+`extensions/ifc_editor/data/ifc4.json.gz` and `ifc2x3.json.gz`, generated from
+buildingSMART's own sources by `dev/schema/`. Read
+**`dev/schema/README.md`** for provenance, attribution and the JSON shape;
+`dev/schema/test_tables.py` checks the committed artefacts and runs from
+`./dev/check.sh`.
+
+Coverage: **776 IFC4 entities, 513 property/quantity sets, every defined type;
+653 IFC2X3 entities, 317 sets.** ~150 KB gzipped each. Verified for
+referential integrity — every attribute type and every pset's applicable
+entity resolves.
+
+### Still to build
+
+The editing UI and the writer: a tray panel that follows the selection (pick an
+element → edit its class, Name, Description, ObjectType, Tag, PredefinedType,
+its `Pset_*` values, and add custom properties), the per-element storage in
+`app.document_data` keyed by `group.uid` / the face tag id, and an *Export IFC
+(full)* menu action writing an `.ifc` that carries all of it.
 
 ## Plugin API — the essentials (0.5.8 / API_VERSION 2)
 
@@ -249,6 +326,13 @@ derivative work — ship it **GPL-3.0-or-later** and keep the SPDX header, or
 keep it purely a plugin contract. Do not paste GPL code into a differently
 licensed project.
 
+**buildingSMART attribution is required** for anything derived from the IFC
+schemas and property-set definitions — their licence permits use in software
+development and translation into another language only *with full
+attribution*. Every generated table carries an `attribution` field and
+`dev/schema/README.md` spells it out; keep both. Any surface that shows IFC
+classification data to a user should name buildingSMART.
+
 ## Our conventions
 
 * One extension per file in `extensions/`, or one directory with `__init__.py`
@@ -278,6 +362,23 @@ licensed project.
   `scene.loose_mesh` for totals.
 * A `delete`/pickable change that skips `set_document_data` is not undoable and
   desyncs the document.
+* The core's IFC **export cannot be extended**: `Description`, `ObjectType`,
+  `PredefinedType` and every `Pset_*` are written as `$` by `formats/ifc.py`,
+  and there is no exporter registration. Extended data needs our own writer.
+* **IfcOpenShell is not in the app bundle**, and no extension can declare a pip
+  dependency. Anything an extension imports must be stdlib, bundled
+  (`PySide6`, `numpy`, `ezdxf`, `openskp`, `manifold3d`) or shipped inside the
+  extension package.
+* `standards.buildingsmart.org` answers **403** without a browser-like
+  `User-Agent` header.
+* The published `ApplicableEntity` of a property set is a **comma-separated
+  list**, may carry a **domain prefix** (`IFCELECTRICALDOMAIN/…`, IFC2X3) or a
+  **predefined-type filter** (`IfcCovering/FLOORING`), and the IFC2X3 files
+  contain stray spaces around some measure names. All three are handled in
+  `dev/schema/generate.py` and covered by tests.
+* Do not build expectations on the exact entity or property count of a schema
+  — the counts live in `dev/schema/test_tables.py` precisely so that a schema
+  revision cannot pass unnoticed.
 * Panel object names are the layout's key: renaming a panel loses the user's
   placement.
 * `start_hidden=True` without an Extensions-menu action is a panel nobody can

@@ -46,3 +46,11 @@ echo "$checked extension(s) compile."
 echo
 echo "contract:"
 "$PY" "$ROOT/dev/lint.py" "$@"
+
+# The schema tables an extension ships are generated artefacts — check they
+# are present and still self-consistent. Skipped when no extension has any.
+if compgen -G "$ROOT/extensions/*/data/*.json.gz" > /dev/null; then
+  echo
+  echo "schema tables:"
+  "$PY" "$ROOT/dev/schema/test_tables.py"
+fi

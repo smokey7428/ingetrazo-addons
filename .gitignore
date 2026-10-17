@@ -1,6 +1,10 @@
 # Upstream clones — read-only reference, refreshed with git pull.
 reference/
 
+# Third-party schema sources for the generator: large, somebody else's
+# copyright, and reduced to the tables we commit. See dev/schema/README.md.
+dev/schema/src/
+
 # Python
 __pycache__/
 *.py[cod]
