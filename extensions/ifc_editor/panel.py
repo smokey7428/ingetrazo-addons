@@ -628,7 +628,10 @@ class IfcEditorPanel(QWidget):
             row.addWidget(drop)
             row.addStretch(1)
             form.addRow(row)
-            narrow(add, drop)
+            # See the note in the openings panel: `narrow()` on a button in a
+            # row with a stretch shrinks it to a 40 px sliver.
+            for button in (add, drop):
+                button.setMinimumWidth(button.sizeHint().width())
 
     def _on_psets(self, pset_name: str) -> None:
         record = self._record()

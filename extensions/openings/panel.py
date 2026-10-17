@@ -182,7 +182,13 @@ class OpeningsPanel(QWidget):
         row.addWidget(self._erase)
         row.addStretch(1)
         outer.addLayout(row)
-        narrow(self._place, self._erase)
+        # NOT `narrow()`: it sets the horizontal size policy to Ignored, and in
+        # a row *with* a stretch that squeezes a button down to the 40 px
+        # minimum it also sets — a sliver reading "P…", which is why these were
+        # invisible. `narrow()` is for controls that must shrink with the tray
+        # (combos, spin boxes); a button in a button row wants its own size.
+        for button in (self._place, self._erase):
+            button.setMinimumWidth(button.sizeHint().width())
 
         self._scroll = QScrollArea()
         self._scroll.setWidgetResizable(True)

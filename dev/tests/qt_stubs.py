@@ -67,6 +67,8 @@ class QWidget(QObject):
         super().__init__(parent)
         self.visible = True
         self.enabled = True
+        self.size_policy_ignored = False
+        self.minimum_width = 0
         self.tooltip = ""
         self.style = ""
         self.layout = None
@@ -98,8 +100,17 @@ class QWidget(QObject):
     def setSizePolicy(self, *_a) -> None:
         pass
 
-    def setMinimumWidth(self, *_a) -> None:
-        pass
+    def setMinimumWidth(self, width) -> None:
+        self.minimum_width = int(width)
+
+    def minimumWidth(self) -> int:
+        return self.minimum_width
+
+    def sizeHint(self):
+        """Just enough for a button: its text, plus a little."""
+        text = getattr(self, "_text", "") or ""
+        return types.SimpleNamespace(width=lambda: max(40, 9 * len(text) + 16),
+                                     height=lambda: 24)
 
     def setWordWrap(self, *_a) -> None:
         pass
@@ -555,7 +566,17 @@ def install() -> None:
             self.open = bool(on)
 
     def narrow(*widgets) -> None:
-        pass
+        """Faithful, unlike my first version: ``views.fold_section.narrow``
+        sets the horizontal size policy to ``Ignored`` and a 40 px minimum, so
+        a control in a row *with* a stretch can be squeezed to a sliver. That is
+        what a combo box or a spin box should do and what a button must not —
+        and it is invisible unless this stub models it."""
+        for w in widgets:
+            if isinstance(w, QComboBox):
+                w.setMinimumContentsLength(6)
+            else:
+                w.size_policy_ignored = True
+                w.setMinimumWidth(40)
 
     def wrapping_form(parent) -> QFormLayout:
         return QFormLayout(parent)

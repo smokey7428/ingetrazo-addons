@@ -305,6 +305,15 @@ def main() -> int:
     equal(len(app.context_menus), 1, "and a right-click entry")
     equal(len(app.outliner_kinds), 1, "and a Type column for the Browser")
 
+    # The two buttons must be readable. `narrow()` would set Ignored's size
+    # policy, and in a row with a stretch that shrinks a button to a 40 px
+    # sliver — a button you cannot see is a button you do not have.
+    for button, label in ((panel._place, "Place"), (panel._erase, "Erase")):
+        check(not button.size_policy_ignored,
+              f"the {label} button keeps its own width")
+        check(button.minimumWidth() >= 40,
+              f"and has room for its label: {button.minimumWidth()}")
+
     # The interactive tool went in through the guarded shim.
     equal(list(window._tools), [tool_mod.TOOL_KEY],
           "the door tool was registered in the host's tool table")

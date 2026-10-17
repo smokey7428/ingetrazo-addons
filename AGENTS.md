@@ -668,7 +668,15 @@ classification data to a user should name buildingSMART.
   a signature of the record and rebuild only when it differs; set that signature
   around our own writes so the notification they cause does not rebuild.
 * A stub that is *wrong* hides real bugs as effectively as real code: the
-  class-change rebuild looked broken until `takeAt` was stubbed to Qt's shape.
+  class-change rebuild looked broken until `takeAt` was stubbed to Qt's shape,
+  and a no-op `narrow()` in the stub hid that it shrinks a button to a 40 px
+  sliver. **`narrow()` is for controls that must shrink with the tray** — combo
+  boxes, spin boxes, line edits. Applied to a `QPushButton` in a row *with* a
+  stretch it sets the horizontal policy to `Ignored`, and Qt then gives the
+  button only the 40 px minimum the same helper sets: a button reading "P…",
+  which is a button you do not have. A button in a button row wants its own
+  size (`setMinimumWidth(button.sizeHint().width())`); the shipped panels only
+  every `narrow()` a button in a *vertical* layout, where it is harmless.
 * **Build a solid's faces, then orient each one outward.** A prism's side quad
   runs the loop one way and the sweep the other, so its Newell normal comes out
   opposite to the direction you computed — `_face` in `windowizer.py` exists for
