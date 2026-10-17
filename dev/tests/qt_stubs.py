@@ -355,9 +355,21 @@ class QLayout:
         return len(self._items)
 
     def takeAt(self, index: int):
+        """Like Qt: a layout item whose ``widget()`` hands back the widget, or
+        None for a nested layout."""
         item = self._items.pop(index)
-        return types.SimpleNamespace(widget=item
-                                     if isinstance(item, QWidget) else None)
+
+        class _Item:
+            def __init__(self, value):
+                self._value = value
+
+            def widget(self):
+                return self._value if isinstance(self._value, QWidget) else None
+
+            def layout(self):
+                return self._value if isinstance(self._value, QLayout) else None
+
+        return _Item(item)
 
     def widgets(self) -> list:
         """Every widget added, layout nesting included — what a test needs to

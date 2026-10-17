@@ -369,6 +369,30 @@ def main() -> int:
     equal(json.dumps(scene.plugin_data, sort_keys=True), before,
           "the plugin data is back to what it was")
 
+    # ---- changing the class rewrites the field list AND the core tag ----
+    box = panel._class_box
+    index = box.findText("IfcDoor")
+    check(index >= 0, "IfcDoor should be pickable")
+    if index >= 0:
+        box.setCurrentIndex(index)
+        box.currentIndexChanged.emit(index)
+        equal(wall.ifc["class"], "IfcDoor",
+              "the class reaches IngeTrazo's own BIM tag")
+        check("OverallHeight" in panel._field_getters,
+              "and the form follows: a door carries OverallHeight")
+        check("OperationType" in panel._field_getters,
+              "and OperationType, which a wall has not")
+        door_psets = list(panel._pset_getters)
+        check("Pset_DoorCommon" in door_psets,
+              f"the door's own property sets appear: {door_psets[:4]}")
+        check("Pset_WallCommon" not in door_psets,
+              "and the wall's are gone")
+        # Put it back for the rest of the test.
+        index = box.findText("IfcWall")
+        box.setCurrentIndex(index)
+        box.currentIndexChanged.emit(index)
+        equal(wall.ifc["class"], "IfcWall", "the class change is reversible")
+
     # ---- a boolean is not a tick box ----
     panel.refresh()
     combo = getattr(_getter_widget(panel, "Pset_WallCommon", "IsExternal"),

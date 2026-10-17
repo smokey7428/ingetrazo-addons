@@ -447,3 +447,10 @@ classification data to a user should name buildingSMART.
 * **PySide6 cannot be imported from the app bundle outside the frozen app**:
   shiboken's bootstrap fails on a missing path. Headless tests therefore stub Qt
   (`dev/tests/qt_stubs.py`) — which exercises logic, not looks.
+* **Clear a layout the Qt way**: `takeAt` returns a layout *item* whose
+  `widget()` is a method, and a layout added without a parent widget leaves its
+  own children parentless, so they linger as stray top-level windows. Put
+  everything in the host as a widget, and `deleteLater()` it; do not reparent to
+  `None`.
+* A stub that is *wrong* hides real bugs as effectively as real code: the
+  class-change rebuild looked broken until `takeAt` was stubbed to Qt's shape.

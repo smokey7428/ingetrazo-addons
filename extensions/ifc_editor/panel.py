@@ -265,7 +265,11 @@ class IfcEditorPanel(QWidget):
         self._schema_box.currentIndexChanged.connect(self._on_schema)
         self._all_entities.toggled.connect(self._fill_classes)
         self._class_filter.textChanged.connect(self._fill_classes)
-        self._class_box.activated.connect(self._on_class)
+        # currentIndexChanged, not activated: activated is overloaded (int and
+        # str) and its resolution depends on the slot's arity. Every
+        # programmatic change to this box goes through blockSignals, so only the
+        # user's own choice arrives here.
+        self._class_box.currentIndexChanged.connect(self._on_class)
         self._name_edit.editingFinished.connect(self._on_name)
 
         app.on_document_changed(self.refresh)
@@ -387,12 +391,26 @@ class IfcEditorPanel(QWidget):
         self._host_layout.addStretch(1)
 
     def _clear_host(self) -> None:
+        """Take the old form out of the layout and hand it to the event loop
+        to delete — the usual Qt way.
+
+        Everything added to the host is a widget, never a loose layout: a
+        layout without a parent widget leaves its own children parentless, and
+        they would linger as stray top-level windows. Reparenting to None here
+        would do the same, which is why the widget is simply deleted.
+        """
         while self._host_layout.count():
             item = self._host_layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
-                widget.setParent(None)
                 widget.deleteLater()
+            else:
+                inner = item.layout()
+                if inner is not None:
+                    for i in range(inner.count()):
+                        child = inner.takeAt(0).widget()
+                        if child is not None:
+                            child.deleteLater()
 
     # ---- class, name, schema ------------------------------------------------
     def _fill_top(self, table, record: dict) -> None:
@@ -532,12 +550,16 @@ class IfcEditorPanel(QWidget):
             self._host_layout.addWidget(section)
             self._fill_one_pset(table, record, name, entry, section)
 
-        row = QHBoxLayout()
+        # In a holder widget, not a bare layout: everything in the host has to
+        # be a widget, or clearing the panel would leave the button parentless
+        # and it would linger as a stray top-level window.
+        holder = QWidget()
+        row = QHBoxLayout(holder)
         add = QPushButton(_t("Add property set…"))
         add.clicked.connect(self._on_add_pset)
         row.addWidget(add)
         row.addStretch(1)
-        self._host_layout.addLayout(row)
+        self._host_layout.addWidget(holder)
 
     def _fill_one_pset(self, table, record: dict, name: str, entry: dict,
                        section: FoldSection) -> None:
