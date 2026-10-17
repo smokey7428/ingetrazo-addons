@@ -127,6 +127,8 @@ def test_prism() -> None:
 def test_whole_door() -> None:
     p = params_mod.normalize({"threshold": 0.02, "handle": 1.05})
     depth = 0.30
+    held = params_mod.frame_depth(p, depth)
+    close(held, 0.114, "the frame is 114 mm of kozijnhout, not the wall")
     built = geometry.parts(p, depth)
 
     for name, faces in built.items():
@@ -139,8 +141,8 @@ def test_whole_door() -> None:
 
     # The lining is the opening less the clear hole, through the wall.
     close(geometry.volume(built["Frame"]),
-          (p["width"] * p["height"] - clear_w * clear_h) * depth,
-          "the lining's volume is the opening less the clear hole")
+          (p["width"] * p["height"] - clear_w * clear_h) * held,
+          "the frame's volume is the opening less the clear hole, 114 mm deep")
 
     # The leaf is a slab of the clear size, its thickness asked for.
     close(geometry.volume(built["Leaf"]),
@@ -156,7 +158,7 @@ def test_whole_door() -> None:
     close(lx, 0.0, "the lining starts at x = 0")
     close(hx, p["width"], "and ends at the opening's far jamb")
     close(ly, 0.0, "the lining starts on the clicked face")
-    close(hy, depth, "and runs to the back of the opening")
+    close(hy, held, "and runs its own 114 mm into the wall")
     close(hz, p["height"], "the lining reaches the head of the opening")
 
     # The leaf reaches the floor (a door has no bottom lining member) and
@@ -179,8 +181,11 @@ def test_handing_and_swing() -> None:
     base = {"width": 0.90, "height": 2.10, "frame_w": 0.06}
     clear_w = 0.90 - 2 * 0.06
     jamb = 0.06
-    centre_y = depth / 2
-    thickness = 0.042
+    base_p = params_mod.normalize(base)
+    thickness = base_p["leaf_t"]
+    held = params_mod.frame_depth(base_p, depth)
+    y0 = (held - thickness) * 0.5
+    centre_y = y0 + thickness * 0.5        # the hinge runs through the middle
 
     # Closed: the leaf lies inside the opening, along x, a thin slab in y.
     closed = geometry.parts(params_mod.normalize(dict(base, open_angle=0.0,
@@ -189,6 +194,7 @@ def test_handing_and_swing() -> None:
     close(lx, jamb, "closed, the leaf starts at the left jamb")
     close(hx, jamb + clear_w, "and ends at the right jamb")
     close(hy - ly, thickness, "and is one leaf thick in y")
+    close(ly, y0, "sitting in the frame's 114 mm of depth")
 
     def leaf_box(p):
         return geometry.bounds(geometry.parts(params_mod.normalize(p), depth)
@@ -343,7 +349,7 @@ def test_window() -> None:
     """The Dutch standards, and that a window is the same machinery.
 
     The numbers are the ones a wooden window is actually made of: kozijnhout
-    67 × 144 mm for the frame, raamhout 54 × 67 mm for a sash that opens, and
+    67 × 114 mm for the frame, raamhout 54 × 67 mm for a sash that opens, and
     20 mm glazing in both. If any of these drift, the frames a carpenter gets
     do not fit the hole the wall was cut for.
     """
@@ -355,7 +361,7 @@ def test_window() -> None:
     close(fixed["frame_w"], 0.067, "kozijnhout 67 mm wide")
     close(fixed["frame_h"], 0.067, "the head is the same section")
     close(fixed["frame_b"], 0.067, "and so is the bottom member")
-    close(fixed["frame_depth"], 0.144, "and 144 mm deep")
+    close(fixed["frame_depth"], 0.114, "and 114 mm deep")
     close(fixed["glass_t"], 0.020, "with 20 mm glass")
     check(not params_mod.moves(fixed), "a vast raam does not open")
     check(fixed["symbol"] is False, "so it has no swing symbol")
@@ -377,7 +383,7 @@ def test_window() -> None:
     door = params_mod.normalize({})
     close(door["frame_w"], 0.067, "the door frame section")
     close(door["frame_b"], 0.0, "a door has no bottom member")
-    close(door["frame_depth"], 0.0, "and its lining follows the wall")
+    close(door["frame_depth"], 0.114, "and its frame is a 114 mm kozijn")
     close(door["width"], 1.064, "a 930 leaf in a 67 mm frame")
     check(door["glass_t"] == 0.0, "a door is not glazed by default")
 
@@ -395,13 +401,13 @@ def test_window() -> None:
     close(clear_h, 1.500 - 2 * 0.067, "the clear height, both members counted")
     close(bottom, 0.067, "the glass starts above the bottom member")
     close(geometry.volume(built["Frame"]),
-          (1.000 * 1.500 - clear_w * clear_h) * 0.144,
-          "the kozijn is 144 mm deep, not the 300 mm of wall")
+          (1.000 * 1.500 - clear_w * clear_h) * 0.114,
+          "the kozijn is 114 mm deep, not the 300 mm of wall")
     close(geometry.volume(built["Glass"]), clear_w * clear_h * 0.020,
           "the glass is the whole opening, 20 mm thick")
     (_lx, ly, _lz), (_hx, hy, hz) = geometry.bounds(built["Frame"])
     close(ly, 0.0, "the frame sits on the face that was clicked")
-    close(hy, 0.144, "and stops 144 mm into the wall")
+    close(hy, 0.114, "and stops 114 mm into the wall")
     close(hz, 1.500, "reaching the head of the opening")
 
     # A draairaam: a sash with the glass set in it.
@@ -434,7 +440,8 @@ def test_window() -> None:
           f"open 90 degrees it reaches across the opening: {opened}")
 
     swing_p = params_mod.normalize({"kind": "window", "type": "swing"})
-    pivot, _y0, _t, _y1 = geometry.hinge_and_panel(swing_p, 0.144)
+    pivot, _y0, _t, _y1 = geometry.hinge_and_panel(
+        swing_p, params_mod.frame_depth(swing_p, depth))
     segments = geometry.swing_symbol(swing_p, depth)
     check(segments, "the draairaam has an arc")
     for a, b in segments:

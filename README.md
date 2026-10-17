@@ -77,11 +77,11 @@ Two rules worth repeating:
 | | |
 | --- | --- |
 | `extensions/ifc_editor/` | Edit every IFC attribute and property set of a tagged element — 776 IFC4 entities and 513 property sets, or 653/317 for IFC2X3. Its own `.ifc` writer (so the edits reach a file) is still to come. |
-| `extensions/openings/` | Parametric doors and windows cut into walls by clicking, with a plan symbol and the scenes that show it in the right view. Defaults are Dutch standard sizes for wooden frames — kozijnhout 67 × 144, raamhout 54 × 67, 20 mm glass — all in one catalogue (`openings/profiles.py`). |
+| `extensions/openings/` | Parametric doors and windows cut into walls by clicking, with a plan symbol and the scenes that show it in the right view. Defaults are Dutch standard sizes for wooden frames — kozijnhout 67 × 114, raamhout 54 × 67, 20 mm glass — all in one catalogue (`openings/profiles.py`). |
 | `extensions/hello_ingetrazo.py` | Smoke test that proves the toolchain (menu entry, tray panel, document data, model counting). Safe to delete once a real extension exists. |
 
 ```bash
 ./dev/check.sh                   # compile + contract + schema-table check
-./dev/test.sh                    # 465 checks, no IngeTrazo and no PySide6 needed
+./dev/test.sh                    # 467 checks, no IngeTrazo and no PySide6 needed
 ./dev/install.sh                 # then restart IngeTrazo
 ```

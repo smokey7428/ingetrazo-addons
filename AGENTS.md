@@ -325,7 +325,7 @@ its symbol behind — hence a "Refresh plan symbols" command.
 | `tool.py` | `DoorTool` — click a wall, see the opening previewed, click to cut it. Stays active so a plan can be worked through. |
 | `panel.py` | The **Openings** tab: the settings for the next door with nothing selected, or the selected door's parameters, rebuilding it where it stands. Changes are coalesced on a short timer — one undo step per settled change, not per arrow key. |
 | `scenes.py` | The Plan / Elevation / 3D scenes, and `refresh` to put a moved door's symbol back. |
-| `profiles.py` | **The Dutch standards**, in one place: timber sections (kozijnhout 67 × 144, raamhout 54 × 67), glazing (hr++ 20 mm), and the window and door types with their sizes and Dutch names. Adding a type later is a line of data here, not a change to the geometry. |
+| `profiles.py` | **The Dutch standards**, in one place: timber sections (kozijnhout 67 × 114, raamhout 54 × 67), glazing (hr++ 20 mm), and the window and door types with their sizes and Dutch names. Adding a type later is a line of data here, not a change to the geometry. |
 | `__init__.py` | `setup(app)`: panel, tool, its own submenu, a right-click entry and the Browser's Type column. |
 
 Coordinates: **x** along the wall (0 at the left jamb), **y** into the wall
@@ -349,8 +349,9 @@ one panel, one tool and one set of geometry build both:
 
 * both are a **frame** lining an opening, made of a section — the width you see
   in elevation (``frame_w``/``frame_h``/``frame_b``) and the depth into the wall
-  (``frame_depth``). ``frame_depth`` of 0 means "follow the wall", which is what
-  a door lining does; a window's kozijn is its own 67 × 144.
+  (``frame_depth``). A frame is its own section deep — kozijnhout 67 × 114, set
+  in the wall, with the rest of the reveal finished by somebody else — and
+  ``frame_depth`` of 0 means "fill the whole reveal" instead.
 * both may have a **part that moves** — a door's leaf, a window's sash — hung on
   a hinge at one side and opening by ``open_angle``;
 * both may be **glazed** (``glass_t``), a door usually not, a window always;
@@ -359,9 +360,9 @@ one panel, one tool and one set of geometry build both:
 
 | Built in | Opening | Sill | Frame | Sash | Glass |
 | --- | --- | --- | --- | --- | --- |
-| Vast raam — fixed window | 1000 × 1500 | 900 | kozijnhout **67 × 144** | — | **20 mm** |
-| Draairaam — side-hung window | 1000 × 1500 | 900 | kozijnhout **67 × 144** | raamhout **54 × 67** | **20 mm** |
-| Stompe deur — hinged door | 1064 × 2082 | 0 | **67** mm, follows the wall | leaf 42 mm | — |
+| Vast raam — fixed window | 1000 × 1500 | 900 | kozijnhout **67 × 114** | — | **20 mm** |
+| Draairaam — side-hung window | 1000 × 1500 | 900 | kozijnhout **67 × 114** | raamhout **54 × 67** | **20 mm** |
+| Stompe deur — hinged door | 1064 × 2082 | 0 | kozijnhout **67 × 114** | leaf 42 mm | — |
 
 A door is ordered by its **leaf**, so its opening is derived: a 930 mm leaf in a
 67 mm frame wants a 1064 mm opening, and a 2015 mm leaf wants 2082 mm — the leaf

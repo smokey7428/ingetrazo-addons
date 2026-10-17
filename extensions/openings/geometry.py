@@ -250,7 +250,7 @@ def parts(p: dict, wall_depth: float) -> dict:
 
     # The frame: the opening rectangle, less the clear hole, as deep as the
     # section. `frame_depth` of 0 follows the wall, which is what a door lining
-    # does; a window's kozijn is its own 67 × 144.
+    # does; a window or a door frame is its own 67 × 114 kozijn.
     outline = _rect(0.0, 0.0, p["width"], p["height"])
     inner = _rect(jamb, bottom, jamb + clear_w, bottom + clear_h)
     out["Frame"] = prism(outline, [inner], 0.0, held, plane="xz")

@@ -397,8 +397,8 @@ def main() -> int:
           f"standing on 900 mm: {values['sill']}")
     check(abs(values["frame_w"] - 0.067) < 1e-9,
           f"in kozijnhout 67: {values['frame_w']}")
-    check(abs(values["frame_depth"] - 0.144) < 1e-9,
-          f"144 mm deep: {values['frame_depth']}")
+    check(abs(values["frame_depth"] - 0.114) < 1e-9,
+          f"114 mm deep: {values['frame_depth']}")
     equal([k.name for k in door.children], ["Frame", "Glass"],
           "a vast raam is a frame and its glass")
     check(scene.mesh.is_closed(), "and the wall is still closed")

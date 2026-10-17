@@ -64,9 +64,22 @@ NUMBERS = {
 #: is not offered: a door has no sash, and a window has no threshold.
 FIELDS = {
     "door": ("width", "height", "open_angle", "leaf_t", "frame_w", "frame_h",
-             "threshold", "handle", "handle_len"),
+             "frame_depth", "threshold", "handle", "handle_len"),
     "window": ("width", "height", "sill", "frame_w", "frame_h", "frame_b",
                "frame_depth", "sash_w", "sash_d", "glass_t"),
+}
+
+#: What a field means, where the label cannot say it all.
+TIPS = {
+    "frame_depth": "How deep the frame section runs into the wall. The "
+                    "standard kozijn is 114 mm; 0 makes the frame fill the "
+                    "whole reveal instead.",
+    "sash_w": "The face width of the sash that opens — raamhout is 54 mm.",
+    "sash_d": "How deep the sash is — raamhout is 67 mm.",
+    "sill": "How far the opening stands above the floor: 900 mm is a "
+            "window, 0 is a door.",
+    "open_angle": "How far the panel stands open, and the arc drawn in the "
+                   "plan.",
 }
 
 _TEXTS = {
@@ -233,6 +246,8 @@ class OpeningsPanel(QWidget):
             box.setDecimals(0 if step >= 1.0 else 2)
             box.setSingleStep(step)
             box.valueChanged.connect(self._on_change)
+            if key in TIPS:
+                box.setToolTip(TIPS[key])
             self._editors[key] = (box, per_metre)
             form.addRow(_t(label) + ":", box)
             narrow(box)

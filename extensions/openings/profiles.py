@@ -10,10 +10,15 @@ Sizes are metres. The two numbers that matter are the *section* — the width yo
 see in elevation and the depth into the wall — and the *opening*, which is what
 ``width`` and ``height`` mean everywhere else in the extension.
 
+A frame is that section deep, not as deep as the wall: a kozijn is 114 mm of
+timber set in the wall, and what is left of the reveal is finished by somebody
+else. ``frame_depth`` of 0 means "fill the whole reveal", for a lining that is
+meant to close it.
+
 Sections
-    ``kozijn`` is kozijnhout 67 × 144 mm: the frame a window is built from.
-    ``raam`` is raamhout 54 × 67 mm: the section of a sash that opens.
-    ``deurkozijn`` is the door frame.
+    ``kozijn`` is kozijnhout 67 × 114 mm: the frame a window or a door is
+    built from. ``raam`` is raamhout 54 × 67 mm: the section of a sash that
+    opens.
 
 Glazing
     ``hr++`` at 20 mm is the double glazing these defaults assume; ``enkel``
@@ -34,10 +39,11 @@ from __future__ import annotations
 MM = 0.001
 
 #: Timber sections, in metres: ``(width in elevation, depth into the wall)``.
+#: Kozijnhout 67 × 114 is the one section both a window and a door are framed
+#: with; a sash is raamhout 54 × 67.
 SECTIONS = {
-    "kozijn": (67 * MM, 144 * MM),        # kozijnhout 67 × 144
+    "kozijn": (67 * MM, 114 * MM),        # kozijnhout 67 × 114
     "raam": (54 * MM, 67 * MM),           # raamhout 54 × 67, an opening sash
-    "deurkozijn": (67 * MM, 114 * MM),    # door frame
 }
 
 #: Glazing thicknesses, by name.
@@ -87,7 +93,7 @@ DOORS = {
         "en": "Single hinged door",
         "leaf_width": 930 * MM,           # a standard binnendeur
         "leaf_height": 2015 * MM,
-        "section": "deurkozijn",
+        "section": "kozijn",
         "glass": None,
         "angle": 90.0,
         "handing": "left",
@@ -188,7 +194,7 @@ def defaults(kind: str, name: str) -> dict:
         "frame_w": width,
         "frame_h": width,
         "frame_b": 0.0,                       # a door has no bottom member
-        "frame_depth": 0.0,                   # 0 = the lining follows the wall
+        "frame_depth": depth,                 # the section, not the whole wall
         "sash_w": 0.0,
         "sash_d": 0.0,
         "glass_t": 0.0,
