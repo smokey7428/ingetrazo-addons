@@ -21,6 +21,10 @@ startup. No plugin SDK to install, no build step, no C++.
 tagged elements, IFC2X3 and IFC4, with its own `.ifc` writer. The brief, the
 constraints and the design are below.
 
+**Second add-on: `openings`** — parametric doors and windows, placed by clicking
+a wall, Revit-style, with a plan symbol and their IFC data. Under construction;
+see its own section below.
+
 ## Layout of this project
 
 ```
@@ -28,12 +32,15 @@ Ingetrazo/
 ├── AGENTS.md            # this file
 ├── README.md
 ├── extensions/          # OUR add-ons — one .py file or one package dir each
-│   └── ifc_editor/          # the IFC field/property editor
-│       ├── __init__.py      # setup(app): the panel + the Extensions-menu entry
-│       ├── schema.py        # the schema tables, and the questions asked of them
-│       ├── store.py         # identity, per-element storage, the undo command
-│       ├── panel.py         # the tray panel that follows the selection
-│       └── data/            # generated schema tables, ~160 KB each, committed
+│   ├── ifc_editor/          # the IFC field/property editor
+│   │   ├── __init__.py      # setup(app): the panel + the Extensions-menu entry
+│   │   ├── schema.py        # the schema tables, and the questions asked of them
+│   │   ├── store.py         # identity, per-element storage, the undo command
+│   │   ├── panel.py         # the tray panel that follows the selection
+│   │   └── data/            # generated schema tables, ~160 KB each, committed
+│   └── openings/            # parametric doors/windows (under construction)
+│       ├── params.py        # the parameters and what they mean
+│       └── geometry.py      # every part, as plain coordinates — no Qt
 ├── dev/
 │   ├── install.sh       # symlink extensions/* into IngeTrazo's plugin folder
 │   ├── uninstall.sh     # remove only OUR symlinks
@@ -213,6 +220,120 @@ geometry and the `Qto_*` sets; the tables tell us the rest.
 Also worth adding later: tagging untagged geometry from this panel (the class
 picker reaches 155 product classes, the core's BIM panel only 16), and reading
 an existing `.ifc` back in.
+
+## The second add-on: `openings`
+
+**The brief (from the user):** a door and window panel like Vectorworks or
+Revit — control over the individual elements, parametric, **displaying properly
+in all views**, and able to carry the needed IFC data.
+
+**Decided:** interactive click-the-wall placement (Revit-like), **one door type
+done completely** first, and the plan symbol plus the scenes that make it show
+in the right views.
+
+### What already exists to build on — study these first
+
+* **`examples/extensions/windowizer.py`** (1592 lines, ships with the app) is the
+  same pattern done for windows, and is the reference for the whole shape of the
+  thing: one container group tagged `IfcWindow`, parts (`Frame`, `Glass n`) as
+  nested groups each with the same `xform` pose, parameters in `group.ext`, a
+  general capture/restore `Command`, an Extensions submenu + right-click menu +
+  an `add_outliner_kind` "Type" column. Read it before writing anything.
+* **The wall opening is solved**: `mesh.remove_face(host_face)` → four reveal
+  quads re-added **carrying the wall's own `attrs`** (material, layer, BIM tag) →
+  `mesh.add_hole(back_face, inner)` punches the matching hole so the wall stays
+  a closed solid. Windowizer's `cut_opening` / `close_opening`, and its
+  `_find_back_face` guard against boring a tunnel to the far facade of a
+  single-plane wall.
+* Its own warning is inherited by any approach that cuts a freeform wall:
+  *"The wall has been edited since, so the opening was not closed for: {names}.
+  Close it by hand."* The opening is topology, not an association.
+* **The community's 26,000-line parametric BIM extension** (`opentrace_bim`,
+  installed on this machine) does walls, slabs, beams, columns — and its
+  `openings.py` says doors and windows are **future work**: *"Hosted objects
+  (future Windowizer/doors or a universal Opening tool) only describe an opening
+  request."* The gap is real and its own authors name it.
+
+### The interactive tool needs private host API
+
+`ExtensionApp` has panels, menus, context menus, overlays, snap providers,
+pickables and file openers — but **no tool registration**. `opentrace_bim` works
+around it, deliberately isolated in its `host.py`:
+
+```python
+for name in ("_tools", "_tool_actions", "_tool_group", "_activate_tool"):
+    if not hasattr(app.window, name):
+        raise RuntimeError("The tool integration in this IngeTrazo "
+                           "installation is not compatible.")
+app.window._tools[key] = tool          # register
+app.window._activate_tool(key)        # make it the active tool
+```
+
+All four exist in 0.5.8. Their comment is the honest summary: *"IngeTrazo 0.5.7
+does not expose public tool-registration methods, so the private host
+collections are intentionally isolated in this module."* Note also that
+`_activate_tool` honours `_tool_filter` (the workspace's `allowed_tools`).
+
+The loader itself sanctions building such a tool — `_builds_bare` only
+auto-instantiates plugin `Tool`s that take no argument, and says *"A tool that
+needs one … is the extension's to build in its `setup(app)`"*. Building it is
+fine; **registering it is the private part**, so keep it behind one guarded
+module (`openings/host.py`) exactly as opentrace does.
+
+### Displaying properly in all views — what the platform actually offers
+
+There is **no per-object plan symbol, and no analytic curves.** What exists:
+
+* Plan/section/elevation come from the hidden-line pass in `core/hlr.py`, which
+  clips on the **single active section plane**, classifies lines as
+  edge/profile/**cut**/hidden, chains the cut chords into fill rings and applies
+  poché. So a door modelled as real geometry reads as a proper cut in plan and
+  section, for free. This is why the leaf is built **standing open** at
+  `open_angle` — the plan cut then matches the swing symbol.
+* Arcs are polylines: the Circle and Arc tools emit straight segments, and DXF
+  export writes LINE entities only.
+* **Layer visibility is one global flag per layer**; a *scene* (`SavedView`)
+  snapshots the **names** of hidden layers, and a composer frame inherits a layer
+  set **only** by being bound to a `scene:<name>`.
+* **A nested group's layer is never consulted**: `world_mesh()` folds children in
+  with no visibility filtering, and `collect_geometry` in the HLR walks
+  top-level groups only. So the swing arc cannot live inside the door group and
+  still be hideable — it goes on the **loose mesh** (where `entity_visible`
+  honours `Edge.layer`) or as a **top-level group** of its own.
+
+Design that follows: the door is real geometry; the arc is a real polyline on a
+`Doors — plan` layer; the three scenes (Plan / Elevation / 3D) are created with
+`SavedView.capture(name, scene, camera)` plus `scene.saved_views.append(...)`,
+which an extension can do. And they inherit the wart that a *moved* door leaves
+its symbol behind — hence a "Refresh plan symbols" command.
+
+### Built so far
+
+| File | What it is |
+| --- | --- |
+| `params.py` | The parameters and what they mean: defaults, tolerant `normalize()` (an unreadable number falls back rather than raising — a door that cannot be rebuilt because one value went bad is worse than a door at 90°), honest `validate()`, and the hinge/swing sign algebra in one place. |
+| `geometry.py` | Every part as plain `(x, y, z)` faces — `Frame`, `Leaf`, `Threshold`, `Handle` — plus the swing arc and the opening outline. Pure: no Qt, no scene, no application imports, so the whole of it is testable. One `prism(outline, holes, start, end, plane)` builds a closed solid and orients every face outward. |
+
+Coordinates: **x** along the wall (0 at the left jamb), **y** into the wall
+(0 on the clicked face), **z** up (0 on the floor).
+
+`dev/tests/test_openings_geometry.py` (132 checks) proves each part is a closed
+solid with a **positive volume** — the same test `core/bim.py` uses before it
+will report a volume — that the volumes match the arithmetic, that the leaf
+turns correctly for all four handing/swing combinations at exact angles, and
+that the arc sits on the hinge at the leaf's radius.
+
+### Still to build
+
+`opening.py` (cut and close the host wall), `object.py` (create/rebuild/erase
+plus the one-undo-step `Command` and the uid→record registry), `tool.py` (the
+interactive tool), `host.py` (the guarded private-API shim), `panel.py` (the
+parameters panel), `scenes.py` (the layers and the three scenes), and
+`__init__.py`.
+
+**The extension is deliberately not installable yet**: `install.sh` and
+`check.sh` both skip a directory with no `__init__.py`, so nothing half-built can
+reach the application.
 
 ## Plugin API — the essentials (0.5.8 / API_VERSION 2)
 
@@ -472,3 +593,16 @@ classification data to a user should name buildingSMART.
   around our own writes so the notification they cause does not rebuild.
 * A stub that is *wrong* hides real bugs as effectively as real code: the
   class-change rebuild looked broken until `takeAt` was stubbed to Qt's shape.
+* **Build a solid's faces, then orient each one outward.** A prism's side quad
+  runs the loop one way and the sweep the other, so its Newell normal comes out
+  opposite to the direction you computed — `_face` in `windowizer.py` exists for
+  exactly this, and `geometry._oriented` does the same. The symptom is a
+  *negative* volume from a shell that is otherwise perfectly closed.
+* **Test a solid by its volume, not by its faces.** Positive volume is the same
+  condition `core/bim.py` uses before it will report one, so a part that fails it
+  would silently have no quantity in the take-off.
+* An *arc* is a polyline of straight segments everywhere in this codebase — the
+  Circle and Arc tools, the HLR and the DXF writer. Never expect a real curve.
+* A rotated slab's bounding box is not the arc of its free edge: it extends half
+  a thickness across as well. Expectations like that are where a test gets
+  written wrong, and the failure looks like a geometry bug.
