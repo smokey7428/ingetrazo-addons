@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """The Take-off panel: what the model is made of.
 
 IngeTrazo's own BIM panel cannot measure a wall of ours — it asks whether a

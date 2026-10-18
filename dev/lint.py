@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """Static check of an IngeTrazo extension: does it actually register anything?
 
 This is the failure ``dev/check.sh`` alone does not catch. A file that parses

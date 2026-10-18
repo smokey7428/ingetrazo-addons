@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """Where an element's IFC fields live, and how they are written.
 
 Two storages, on purpose:

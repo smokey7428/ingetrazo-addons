@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """Drive the whole doors extension headlessly: panel, tool, scenes.
 
 Qt is stubbed (``dev/tests/qt_stubs.py``) and so is the core

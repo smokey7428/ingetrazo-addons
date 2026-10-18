@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """A reader for STEP Physical Files — the ``.ifc`` text format (ISO 10303-21).
 
 Enough of it for the property-set template files buildingSMART publishes, and

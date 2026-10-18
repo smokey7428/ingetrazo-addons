@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """Check the door's geometry and its parameters — no Qt, no IngeTrazo.
 
 The geometry is built from plain coordinates on purpose, so this can check the

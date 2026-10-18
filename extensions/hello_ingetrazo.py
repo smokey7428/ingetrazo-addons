@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """Smoke test for this project's extension setup — tested with IngeTrazo 0.5.8.
 
 Proves end to end that:

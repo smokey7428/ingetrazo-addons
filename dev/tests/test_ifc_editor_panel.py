@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """Drive the ifc_editor panel's logic headlessly, against stubbed Qt.
 
 This runs the real panel code — building the form for a tagged element, filling

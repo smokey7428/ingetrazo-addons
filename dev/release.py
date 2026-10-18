@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """Build the release artefacts and the catalog entries.
 
 Two things the community catalog needs, and one rule that shapes both:
@@ -33,7 +33,7 @@ CATALOG = ROOT / "catalog"
 
 #: Where the extensions live publicly. One repository, one tag per extension.
 REPOSITORY = "https://github.com/smokey7428/ingetrazo-addons"
-AUTHOR = "Eric Smook"
+AUTHOR = "smokey7428"
 AUTHOR_URL = "https://github.com/smokey7428"
 
 #: The IngeTrazo version they were tested with.
@@ -45,20 +45,19 @@ ENTRIES = {
     "ifc_editor": {
         "tags": ["bim", "import-export"],
         "name": {
-            "es": "Campos IFC — editor completo",
-            "en": "IFC fields — full editor",
-            "pt": "Campos IFC — editor completo",
+            "es": "Datos IFC — lectura y edición",
+            "en": "IFC data — read and edit",
+            "pt": "Dados IFC — leitura e edição",
         },
         "summary": {
-            "es": "Edita todos los atributos y conjuntos de propiedades IFC de "
-                  "un elemento, con los 776 tipos de IFC4, y exporta un .ifc "
-                  "que los lleva, incluidos los huecos de los muros.",
-            "en": "Edit every IFC attribute and property set of an element, "
-                  "across all 776 IFC4 entities, and export an .ifc that "
-                  "carries them — including the openings in walls.",
-            "pt": "Edite todos os atributos e conjuntos de propriedades IFC de "
-                  "um elemento, com as 776 entidades IFC4, e exporte um .ifc "
-                  "que os leva, incluindo os vãos das paredes.",
+            "es": "Lee y edita los datos IFC de un modelo: todos los campos y "
+                  "conjuntos de propiedades de cada elemento, con exportación "
+                  "a un .ifc que los conserva.",
+            "en": "Read and edit a model's IFC data: every field and property "
+                  "set of every element, with an .ifc export that keeps them.",
+            "pt": "Leia e edite os dados IFC de um modelo: todos os campos e "
+                  "conjuntos de propriedades de cada elemento, com exportação "
+                  "para um .ifc que os mantém.",
         },
     },
     "openings": {
@@ -69,15 +68,15 @@ ENTRIES = {
             "pt": "Paredes, portas e janelas",
         },
         "summary": {
-            "es": "Muros multicapa dibujados como polilínea (67 × 114, 54 × 67, "
-                  "cristal de 20 mm) con puertas y ventanas paramétricas "
-                  "alojadas en ellos, y un metrado por capa.",
-            "en": "Multi-skin walls drawn as a polyline (kozijnhout 67 × 114, "
-                  "raamhout 54 × 67, 20 mm glass) with parametric doors and "
-                  "windows hosted in them, and a take-off per skin.",
-            "pt": "Paredes multicamada desenhadas como polilinha (67 × 114, "
-                  "54 × 67, vidro de 20 mm) com portas e janelas "
-                  "paramétricas alojadas nelas, e um orçamento por camada.",
+            "es": "Dibuja muros por capas siguiendo una polilínea y coloca "
+                  "puertas y ventanas paramétricas en ellos, con sus datos "
+                  "IFC y un metrado por capa.",
+            "en": "Draw layered walls along a polyline and place parametric "
+                  "doors and windows in them, with their IFC data and a "
+                  "take-off per layer.",
+            "pt": "Desenhe paredes em camadas ao longo de uma polilinha e "
+                  "coloque portas e janelas paramétricas nelas, com os seus "
+                  "dados IFC e um orçamento por camada.",
         },
     },
 }

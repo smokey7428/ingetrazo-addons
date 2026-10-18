@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """Write the document as IFC — every field you edited, and the walls' openings.
 
 The core has its own IFC writer (``formats/ifc.py``) and it is good at what it

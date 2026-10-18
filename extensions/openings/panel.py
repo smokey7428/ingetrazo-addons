@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """The Openings panel: the parameters of the door or window in front of you.
 
 It works whether or not something is selected, because those are the two halves

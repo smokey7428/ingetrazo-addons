@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """The door as a document object: make one, change it, erase it.
 
 A door is **one container group**, tagged ``IfcDoor``, whose parts are nested

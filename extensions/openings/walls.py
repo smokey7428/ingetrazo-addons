@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """A wall of our own: skins along a path, and the numbers that regenerate it.
 
 This is the piece the openings did not have. IngeTrazo has no wall object — a

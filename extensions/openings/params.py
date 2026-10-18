@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """The parameters of one opening, and what each one means.
 
 Pure data: no Qt, no scene, no imports from the application. Everything an

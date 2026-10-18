@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """The IFC schema tables, and the questions the editor asks of them.
 
 Pure Python, no Qt: everything here is testable without the application.

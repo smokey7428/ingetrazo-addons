@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """Doors & windows — parametric doors cut into walls, the Revit way.
 
 Tested with IngeTrazo 0.5.8 (extension API 2).

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """A wall's geometry: skins swept along a path, mitred where it turns.
 
 Every skin is built as **one closed solid per segment** — the skin's plan

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """The one place that reaches into IngeTrazo's internals.
 
 IngeTrazo 0.5.8 has **no public way for an extension to register an

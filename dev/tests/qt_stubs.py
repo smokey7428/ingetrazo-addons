@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """Enough of PySide6 to run a panel's logic without Qt.
 
 IngeTrazo's bundle ships PySide6, but it cannot be imported outside the frozen

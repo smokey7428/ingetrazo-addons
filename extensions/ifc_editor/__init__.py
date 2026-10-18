@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """IFC fields — edit every attribute and property set of a tagged element.
 
 Tested with IngeTrazo 0.5.8 (extension API 2).

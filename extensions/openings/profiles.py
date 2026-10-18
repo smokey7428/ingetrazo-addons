@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """Dutch standard sizes and timber sections, in one place.
 
 Everything this extension ships as a default comes from here, so **adding a

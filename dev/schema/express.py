@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """A reader for the EXPRESS schema files buildingSMART publishes (``.exp``).
 
 We need three things out of a schema, and nothing else:

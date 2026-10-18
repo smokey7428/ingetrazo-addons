@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """The wall tool: draw a wall like a polyline.
 
 Click the points a wall runs through — it is drawn along its **centre line**,

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """The wall as a document object: make one, change it, erase it.
 
 A wall is **one container group**, tagged ``IfcWall``, whose parts are its

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """Build the IFC schema tables the ifc_editor extension ships.
 
 Input   dev/schema/src/  (fetch with ./dev/schema/fetch.sh — not committed)

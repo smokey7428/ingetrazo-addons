@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """Test the ifc_editor extension's logic without IngeTrazo.
 
 Why the core is stubbed: ``store.py`` imports ``core.group``, ``core.history``

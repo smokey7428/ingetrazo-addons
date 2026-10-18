@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """Putting an opening in a wall of ours: the association.
 
 This is what the whole walls layer was for. When a door or window is placed on

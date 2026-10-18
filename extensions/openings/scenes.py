@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """The views a door needs, and the one layer trick that makes them work.
 
 A door needs two things the platform does not give per object: a **plan

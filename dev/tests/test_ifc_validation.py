@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """Validate the exported IFC4 against a REAL consumer: ifcopenshell.
 
 `test_ifc_writer.py` checks the file with this project's own STEP reader. That

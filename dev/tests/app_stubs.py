@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """Stand-ins for the parts of IngeTrazo an extension builds document objects
 with: the vector maths, the mesh, groups, materials, layers, the scene and the
 undo stack.

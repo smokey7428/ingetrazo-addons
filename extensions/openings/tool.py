@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """The door tool: click a wall, get a door.
 
 Deliberately like every other IngeTrazo tool — activate it, the cursor picks

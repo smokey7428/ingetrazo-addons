@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """The IFC panel: every field of the selected element, editable.
 
 It follows the selection — pick a tagged group or tagged faces and its IFC

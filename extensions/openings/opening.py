@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Eric Smook.
+# Copyright (C) 2026 the ingetrazo-addons contributors.
 """Opening a wall for a door, and putting the wall back.
 
 The pattern is Windowizer's, and it is the whole reason a hosted opening works
