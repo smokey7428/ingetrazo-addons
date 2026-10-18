@@ -56,6 +56,30 @@ def _t(text: str, **kw) -> str:
     return out.format(**kw) if kw else text
 
 
+def export(app) -> None:
+    """Write the document as IFC, with the fields this extension holds."""
+    from views.filedialogs import file_dialogs
+
+    from . import writer
+
+    path, _filter = file_dialogs.getSaveFileName(
+        app.window, _t("Export IFC (full)"), "model.ifc",
+        _t("IFC4 (*.ifc);;All files (*)"))
+    if not path:
+        return
+    try:
+        count = writer.save(app.scene, path, schema="IFC4")
+    except ValueError as exc:
+        app.viewport.flash_status(str(exc), 6000)
+        return
+    except Exception as exc:                           # noqa: BLE001
+        log.exception("ifc_editor: the export failed")
+        app.viewport.flash_status(f"IFC: {exc}", 8000)
+        return
+    app.viewport.flash_status(
+        _t("Wrote {n} element(s) to {path}", n=count, path=path), 5000)
+
+
 def setup(app) -> None:
     """Called once, when the main window is built."""
     from . import schema as schema_mod
@@ -84,3 +108,10 @@ def setup(app) -> None:
         _t("IFC fields"), lambda: app.show_panel(dock), shortcut="Ctrl+Shift+F",
         tip=_t("Edit every attribute and property set of the selected IFC "
                "object."))
+
+    # The other half: a file that carries what you edited. The core's own
+    # Export IFC writes a fixed, narrow set, so this is not a duplicate of it.
+    app.add_menu_action(
+        _t("Export IFC (full)…"), lambda: export(app),
+        tip=_t("Write an .ifc with every attribute and property set you "
+               "edited, and the openings in our walls."))

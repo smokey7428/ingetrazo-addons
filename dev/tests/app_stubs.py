@@ -395,6 +395,43 @@ def install() -> None:
     sys.modules["core.layers"] = module("core.layers", Layer=Layer,
                                         layer_of=layer_of)
 
+    def collect_objects(scene):
+        """Tagged BIM objects: loose faces by tag id, then tagged groups."""
+        out, by_id = [], {}
+        for face in scene.mesh.faces:
+            tag = face.attrs.get("ifc")
+            if tag:
+                by_id.setdefault(tag.get("id"), (tag, []))[1].append(face)
+        for _id, (tag, faces) in sorted(by_id.items(),
+                                        key=lambda kv: kv[0] or 0):
+            out.append({"key": ("faces", _id), "class": tag.get("class", ""),
+                        "name": tag.get("name", ""), "area": 0.0,
+                        "volume": None, "faces": faces})
+        for group in scene.groups:
+            tag = getattr(group, "ifc", None)
+            if not tag:
+                continue
+            # A container's geometry is its children's, folded in — which is
+            # what the real core does, and what makes a wall or a door with
+            # parts measurable at all.
+            faces = list(group.mesh.faces)
+            for child in getattr(group, "children", None) or ():
+                faces.extend(child.mesh.faces)
+            out.append({"key": ("group", id(group)),
+                        "class": tag.get("class", ""),
+                        "name": tag.get("name", ""), "area": 0.0,
+                        "volume": None, "group": group, "faces": faces or None})
+        return out
+
+    def class_quantities(ifc_class, faces):
+        """Just enough shape for a writer: a name, entries and the metrado."""
+        return (f"Qto_{ifc_class[3:]}BaseQuantities",
+                [("area", "GrossArea", 1.0)], (1.0, "m2"))
+
+    sys.modules["core.bim"] = module("core.bim",
+                                     collect_objects=collect_objects,
+                                     class_quantities=class_quantities)
+
     history_mod = module("core.history")
 
     class Command(abc.ABC):

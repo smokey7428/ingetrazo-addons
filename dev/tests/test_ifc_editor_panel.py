@@ -274,7 +274,8 @@ def main() -> int:
     module.setup(app)
     store = sys.modules["ingetrazo_plugin_ifc_editor.store"]
     equal(list(app.panels), ["IFC"], "setup adds one panel, titled IFC")
-    equal(len(app.menu_actions), 1, "and one Extensions-menu entry")
+    equal(len(app.menu_actions), 2,
+          "and two Extensions-menu entries: the panel, and the full IFC export")
     text, _fn, shortcut, tip = app.menu_actions[0]
     # The app's own shortcuts are NOT checked by add_menu_action, so a clash
     # here makes both the app's action and ours ambiguous. Refresh this list

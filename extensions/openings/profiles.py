@@ -46,6 +46,18 @@ SECTIONS = {
     "raam": (54 * MM, 67 * MM),           # raamhout 54 × 67, an opening sash
 }
 
+#: Bulk density of the materials a wall is built from, kg/m³ — what a builder
+#: orders in tonnes and what a take-off bills in kilos. A rough, honest figure
+#: per material, not a structural value.
+DENSITY = {
+    "Brick": 1800.0,
+    "Insulation": 30.0,
+    "Block": 700.0,
+    "Concrete": 2400.0,
+    "Timber": 500.0,
+    "Steel": 7850.0,
+}
+
 #: Glazing thicknesses, by name.
 GLASS = {
     "enkel": 4 * MM,

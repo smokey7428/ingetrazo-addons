@@ -490,6 +490,36 @@ Both rims are found again **by the corners of their holes**, never by holding a
 face object: a face cannot be saved in the document, and after an undo it is
 not the same object anyway.
 
+### The `.ifc` writer — `ifc_editor/writer.py`
+
+The core's `formats/ifc.py` writes a fixed, narrow set — GlobalId, Name, Tag,
+geometry and `Qto_*` — with `Description`, `ObjectType`, `PredefinedType`,
+`OperationType` and every `Pset_*` as `$`. Editing fields that never reach the
+file is editing nothing, so the extension has its own writer, behind
+**Extensions ▸ Export IFC (full)…**
+
+It hardcodes nothing: **the schema tables say which attributes a class has, in
+which order, and what type each holds**, so an element is emitted with the right
+number of attributes and the right literal for all 776 classes.
+`Table.resolve_kind` picks the literal — a label quoted, a measure as a number,
+an enumeration as `.X.`, a boolean as `.T.`.
+
+It also writes what the core cannot know: a wall's openings become
+`IfcOpeningElement` + `IfcRelVoidsElement`, and a hosted door or window
+`IfcRelFillsElement` — **read from the document**, not by importing the other
+extension (`OPENINGS_KEY` is a name to agree on; the data is in the `.igz`).
+
+IFC4 only so far. IFC2X3 names classes differently (`IfcWallStandardCase`) and
+keeps `PredefinedType` on the type entities — the *layout* is already driven by
+the tables, the *vocabulary* is the next step.
+
+`dev/tests/test_ifc_writer.py` writes a file and reads it back with
+`dev/schema/spf.py` — this project's own STEP reader, so the writer is checked
+by code that did not write it: instances parse, every reference resolves, the
+attribute counts come from the schema, the edited fields and psets are present,
+and both relations exist. What it cannot reach here is a *real* consumer:
+ifcopenshell is not installed on this machine.
+
 ### Installed
 
 `./dev/install.sh` links it; **Extensions ▸ Doors & windows**, and the **Doors**

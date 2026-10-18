@@ -188,6 +188,14 @@ class WallsPanel(QWidget):
         form.addRow(_t("Height (mm)") + ":", self._height)
         narrow(self._height)
         self._host_layout.addWidget(section)
+
+        section = FoldSection(_t("Quantities"), "openings/wall/quantities",
+                              self, default_open=False)
+        form = wrapping_form(section.body)
+        self._quantities = QLabel("—")
+        self._quantities.setWordWrap(True)
+        form.addRow(self._quantities)
+        self._host_layout.addWidget(section)
         self._host_layout.addStretch(1)
 
     def _add_skin_row(self, index: int, skin: dict) -> None:
@@ -342,6 +350,24 @@ class WallsPanel(QWidget):
         w = wall_obj.wall_params(wall)
         self._status.setText(f"{wall.name}\n{walls.describe(w)}")
         self._erase.setEnabled(True)
+        self._show_quantities(w)
+
+    def _show_quantities(self, w: dict) -> None:
+        """Per skin: the wall face a builder prices, its volume and its mass.
+
+        A composite wall is a stack of solids, so this — not one number for
+        "the wall" — is what a take-off wants: m² of brick, m² of insulation,
+        m³ of block.
+        """
+        label = getattr(self, "_quantities", None)
+        if label is None:
+            return
+        lines = []
+        for row in wall_obj.quantities(w):
+            mass = (f" · {row['mass']:.0f} kg" if row["mass"] else "")
+            lines.append(f"{row['name']}: {row['area']:.2f} m² · "
+                         f"{row['volume']:.3f} m³{mass}")
+        label.setText("\n".join(lines) or "—")
 
     def refresh(self) -> None:
         if self._writing:

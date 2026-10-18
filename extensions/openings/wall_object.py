@@ -135,6 +135,37 @@ def regenerate(scene, group, w: dict) -> None:
     group.ifc = {"class": "IfcWall", "name": group.name}
 
 
+def quantities(w: dict) -> list:
+    """``[{name, material, area, volume, mass}, …]`` — one row per skin.
+
+    The area is the **wall face** a builder prices (volume ÷ thickness, so a
+    mitred skin is measured by what it is made of, not by a bounding box), and
+    the mass is the volume times the material's density where we know it.
+
+    A composite wall is a stack of solids, so this — not one number for "the
+    wall" — is what a take-off wants: m² of brick, m² of insulation, m³ of
+    block.
+    """
+    from . import profiles
+
+    w = walls.normalize(w)
+    built = wall_geometry.skin_faces(w)
+    out = []
+    for skin, _from, _to in walls.offsets(w):
+        faces = built.get(skin["name"]) or []
+        volume = wall_geometry.volume({skin['name']: faces}) if faces else 0.0
+        thickness = float(skin["thickness"]) or 1.0
+        density = profiles.DENSITY.get(skin["material"])
+        out.append({
+            "name": skin["name"],
+            "material": skin["material"],
+            "volume": volume,
+            "area": volume / thickness,
+            "mass": volume * density if density else None,
+        })
+    return out
+
+
 def erase(scene, group) -> bool:
     """Take the wall out. True — there is nothing to close up behind it."""
     if group in scene.groups:
