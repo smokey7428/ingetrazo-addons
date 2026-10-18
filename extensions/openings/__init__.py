@@ -61,6 +61,8 @@ _TEXTS = {
         "Wall": "Muro",
         "Draw a wall…": "Dibujar un muro…",
         "Walls panel…": "Panel de muros…",
+        "Take-off": "Metrado",
+        "Take-off…": "Metrado…",
         "Place a door or window…": "Colocar una puerta o ventana…",
         "Draw a wall along a polyline, built from the panel's skins.":
             "Dibuja un muro por una polilínea, construido con las capas del "
@@ -96,6 +98,7 @@ def setup(app) -> None:
     from .object import is_opening
     from .panel import OpeningsPanel
     from .tool import TOOL_KEY, DoorTool
+    from .takeoff_panel import TakeoffPanel
     from .wall_object import is_wall
     from .wall_panel import WallsPanel
     from .wall_tool import TOOL_KEY as WALL_TOOL_KEY
@@ -112,6 +115,13 @@ def setup(app) -> None:
     walls_dock = app.add_panel(_t("Walls"), walls_panel, name="walls")
     walls_panel.attach_dock(walls_dock)
     _remember(walls_panel)
+
+    # The take-off, which the core's BIM panel cannot do for a composite wall.
+    takeoff_panel = TakeoffPanel(app)
+    takeoff_dock = app.add_panel(_t("Take-off"), takeoff_panel,
+                                 name="takeoff")
+    takeoff_panel.attach_dock(takeoff_dock)
+    _remember(takeoff_panel)
 
     wall_tool = WallTool(app, walls_panel, _t)
     if host.register(app, WALL_TOOL_KEY, wall_tool, _t("Wall"),
@@ -138,6 +148,8 @@ def setup(app) -> None:
                       lambda: host.activate(app, WALL_TOOL_KEY))
         sub.addAction(_t("Walls panel…"),
                       lambda: app.show_panel(walls_dock))
+        sub.addAction(_t("Take-off…"),
+                      lambda: app.show_panel(takeoff_dock))
         sub.addAction(_t("Edit…"), lambda: app.show_panel(dock))
         sub.addAction(_t("Erase"), panel._on_erase)
         sub.addSeparator()

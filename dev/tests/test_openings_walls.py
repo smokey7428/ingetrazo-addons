@@ -430,11 +430,57 @@ def test_hosting() -> None:
         pass
 
 
+def test_takeoff() -> None:
+    """The take-off reads the wall's skins, which the core's panel cannot."""
+    scene = app_stubs.Scene()
+    vp = app_stubs.Viewport(scene)
+    V = app_stubs.QVector3D
+
+    w = walls.normalize({"height": 2.7, "path": [[0, 0], [4, 0]],
+                         "openings": [{"segment": 0, "start": 1.5,
+                                       "width": 1.0, "sill": 0.9,
+                                       "height": 1.4}]})
+    wall = wall_object.create(scene, w)
+    window = hosting.add(scene, wall, V(2.0, 0.05, 1.2), V(0, 1, 0),
+                         {"kind": "window", "type": "swing"})
+    del vp
+
+    data = takeoff.rows(scene)
+    equal(len(data["walls"]), 3, "one row per skin")
+    equal([row["part"] for row in data["walls"]],
+          ["Buitenblad", "Isolatie", "Binnenblad"], "named as the build-up")
+    for row in data["walls"]:
+        # 4 m x 2.7 m less the 1.0 x 1.4 window, on every skin.
+        close(row["area"], 4.0 * 2.7 - 1.0 * 1.4, f"{row['part']}'s face area")
+        close(row["volume"], row["area"] * 0.100, f"{row['part']}'s volume")
+    brick = data["walls"][0]
+    close(brick["mass"], brick["volume"] * 1800.0, "and its mass in brick")
+
+    equal(len(data["openings"]), 1, "one opening row")
+    row = data["openings"][0]
+    equal(row["kind"], "window", "which is a window")
+    equal(row["name"], window.name, "named as the group")
+    check("Draairaam" in row["type"], f"and typed from the catalogue: {row}")
+    check(row["opens"], "and it opens")
+
+    # The totals are the sum of the skins, and every skin is counted once.
+    close(data["totals"]["area"], 3 * (4.0 * 2.7 - 1.0 * 1.4),
+          "the total face area")
+    check(takeoff.csv(data).startswith("kind,element,part,material"),
+          "the CSV has a header")
+    equal(len(takeoff.csv(data).strip().splitlines()), 5,
+          "and four rows: three skins and one opening")
+    check("Buitenblad" in takeoff.wall_lines(data), "the text lists the skins")
+    check("Windows (1)" in takeoff.opening_lines(data),
+          f"and the openings by kind: {takeoff.opening_lines(data)!r}")
+    check("m²" in takeoff.summary(data), "the summary carries the area")
+
+
 def main() -> int:
     install_package()
     app_stubs.install()
     global profiles, params, geometry, walls, wall_geometry, wall_object
-    global object_mod, hosting
+    global object_mod, hosting, takeoff
     profiles = load("profiles")
     params = load("params")
     geometry = load("geometry")
@@ -444,6 +490,7 @@ def main() -> int:
     object_mod = load("object")
     wall_object = load("wall_object")
     hosting = load("hosting")
+    takeoff = load("schedule")
 
     test_model()
     test_straight()
@@ -453,6 +500,7 @@ def main() -> int:
     test_openings_in_walls()
     test_wall_object()
     test_hosting()
+    test_takeoff()
 
     if failures:
         for failure in failures:

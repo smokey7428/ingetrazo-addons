@@ -307,8 +307,8 @@ def main() -> int:
 
     # ---- setup(app) ----
     extension.setup(app)
-    equal(list(app.panels), ["Openings", "Walls"],
-          "setup adds the Openings panel and the Walls panel")
+    equal(list(app.panels), ["Openings", "Walls", "Take-off"],
+          "setup adds the Openings, Walls and Take-off panels")
     panel = app.panels["Openings"].widget
     check(panel._dock is not None, "the panel knows its own tab")
     check(bool(app.menus), "and the extension has its own submenu")

@@ -1,0 +1,20 @@
+id = "ifc_editor"
+version = "1.0"
+author = "Eric Smook"
+author_url = "https://github.com/smokey7428"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/smokey7428/ingetrazo-addons"
+download = "https://github.com/smokey7428/ingetrazo-addons/releases/download/ifc_editor-v1.0/ifc_editor-1.0.zip"
+sha256 = "9c862c557a8669deaf9e1fb933df977b20d601169a8bf73806d48dda10d73712"
+ingetrazo = "0.5.8"
+tags = ["bim", "import-export"]
+
+[name]
+es = "Campos IFC — editor completo"
+en = "IFC fields — full editor"
+pt = "Campos IFC — editor completo"
+
+[summary]
+es = "Edita todos los atributos y conjuntos de propiedades IFC de un elemento, con los 776 tipos de IFC4, y exporta un .ifc que los lleva, incluidos los huecos de los muros."
+en = "Edit every IFC attribute and property set of an element, across all 776 IFC4 entities, and export an .ifc that carries them — including the openings in walls."
+pt = "Edite todos os atributos e conjuntos de propriedades IFC de um elemento, com as 776 entidades IFC4, e exporte um .ifc que os leva, incluindo os vãos das paredes."
