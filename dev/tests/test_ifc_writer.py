@@ -110,8 +110,8 @@ def main() -> int:
     store.edit(viewport, store.object_key(window),
                fields={"Description": "Draairaam, 1.0 × 1.5",
                        "ObjectType": "HR++",
-                       "PredefinedType": "SINGLEPANEL",
-                       "OperationType": "SINGLE_PANEL"},
+                       "PredefinedType": "WINDOW",
+                       "PartitioningType": "SINGLE_PANEL"},
                psets={"Pset_WindowCommon": {"IsExternal": True,
                                             "Reference": "R-01"}})
 
@@ -152,7 +152,9 @@ def main() -> int:
     attributes = windows[0].args
     equal(attributes[3], "Draairaam, 1.0 × 1.5", "its Description survived")
     equal(attributes[4], "HR++", "and its ObjectType")
-    check("SINGLEPANEL" in str(attributes), "and its PredefinedType")
+    check("WINDOW" in str(attributes), "and its PredefinedType")
+    check("SINGLE_PANEL" in str(attributes),
+          "and its partitioning, from a legal enumeration")
     # (IfcWindow has no OperationType — that is a door's attribute — so what
     # matters is that the schema's own list decided the layout.)
     equal(len(attributes), 13, f"IfcWindow carries its thirteen: {attributes}")

@@ -141,8 +141,61 @@ def _points(step: _Step, cache: dict, corners) -> list:
     return ids
 
 
+def _components(faces) -> list:
+    """The face set split into connected solids, by shared corners.
+
+    A multi-skin wall — or a skin cut into blocks by its openings — is several
+    solids, not one. An ``IfcClosedShell`` is meant to be a single connected
+    manifold, so each solid gets its own brep and the representation lists them
+    all: that is how IFC describes an element made of parts.
+    """
+    parent = list(range(len(faces)))
+
+    def find(index: int) -> int:
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    def union(a: int, b: int) -> None:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[rb] = ra
+
+    owner: dict = {}
+    for index, (loop, holes) in enumerate(faces):
+        for ring in (loop, *holes):
+            for corner in ring:
+                point = getattr(corner, "position", corner)
+                key = (round(point.x(), 6), round(point.y(), 6),
+                       round(point.z(), 6)) if hasattr(point, "x") else \
+                    tuple(round(float(c), 6) for c in point)
+                if key in owner:
+                    union(index, owner[key])
+                else:
+                    owner[key] = index
+
+    groups: dict = {}
+    for index in range(len(faces)):
+        groups.setdefault(find(index), []).append(index)
+    return [groups[key] for key in groups]
+
+
 def brep(step: _Step, faces, context: int) -> int:
-    """Faceted geometry for a face set → an ``IFCSHAPEREPRESENTATION`` id."""
+    """Faceted geometry for a face set → an ``IFCSHAPEREPRESENTATION`` id.
+
+    One ``IfcFacetedBrep`` per connected solid, listed together in the
+    representation's items — so a wall of skins, or a skin in blocks around its
+    openings, is written the way IFC expects a compound body.
+    """
+    items = [_solid(step, [faces[i] for i in group])
+             for group in _components(faces)]
+    return step.add("IFCSHAPEREPRESENTATION", f"#{context}", "'Body'",
+                    "'Brep'", "(" + ",".join(f"#{i}" for i in items) + ")")
+
+
+def _solid(step: _Step, faces) -> int:
+    """One connected solid → an ``IFCFACETEDBREP`` id."""
     cache: dict = {}
     ids = []
     for loop, holes in faces:
@@ -160,9 +213,7 @@ def brep(step: _Step, faces, context: int) -> int:
         ids.append(step.add("IFCFACE", "(" + ",".join(bounds) + ")"))
     shell = step.add("IFCCLOSEDSHELL",
                      "(" + ",".join(f"#{i}" for i in ids) + ")")
-    item = step.add("IFCFACETEDBREP", f"#{shell}")
-    return step.add("IFCSHAPEREPRESENTATION", f"#{context}", "'Body'",
-                    "'Brep'", f"(#{item})")
+    return step.add("IFCFACETEDBREP", f"#{shell}")
 
 
 def _box(corners) -> list:
@@ -372,7 +423,17 @@ def _attributes(table, ifc_class: str, values: dict, placement: int,
             out.append(f"#{shape}")
         else:
             kind = table.resolve_kind(attribute["type"])
-            out.append(literal(kind, values.get(name)))
+            value = values.get(name)
+            if kind == "enum" and value is not None:
+                # Only a legal literal of *that* enumeration may be written. A
+                # value from another enum — SINGLEPANEL is a window's
+                # PartitioningType, not its PredefinedType — would be written as
+                # an illegal STEP enumeration and read back as nothing at all.
+                allowed = attribute.get("enum") or []
+                if allowed and str(value).strip().upper() not in \
+                        [option.upper() for option in allowed]:
+                    value = None
+            out.append(literal(kind, value))
     return out
 
 

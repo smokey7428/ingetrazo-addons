@@ -513,7 +513,29 @@ IFC4 only so far. IFC2X3 names classes differently (`IfcWallStandardCase`) and
 keeps `PredefinedType` on the type entities — the *layout* is already driven by
 the tables, the *vocabulary* is the next step.
 
-`dev/tests/test_ifc_writer.py` writes a file and reads it back with
+**Validated against a real consumer.** `dev/tests/test_ifc_validation.py` writes
+a wall + window + opening and runs it through **ifcopenshell** (0.9.0.post1):
+schema validation reports **no messages**, the edited fields and property sets
+read back through `ifcopenshell.util.element.get_psets`, both relations resolve,
+every product tessellates through `ifcopenshell.geom`, and the opening measures
+1.0 × 1.5 × 0.3 m in the geometry. ifcopenshell is **dev-only** (not in
+requirements, not in the bundle) and the test skips when it is absent — install
+it with `pip install --target … ifcopenshell==0.9.0.post1` and `PYTHONPATH`;
+the docstring has the exact command.
+
+Two things that validation caught and nothing else would have:
+
+* **An illegal enumeration is written as nothing.** `SINGLEPANEL` is a window's
+  `PartitioningType`, not its `PredefinedType`; written anyway, ifcopenshell
+  read it back as `None` and said nothing. `literal()` now checks every enum
+  value against the attribute's own list and emits `$` when it does not belong —
+  a value from the wrong enum is worse than no value, because it looks like data.
+* **A shell has to be one connected solid.** A multi-skin wall (or a skin cut
+  into blocks by its openings) is several solids; `_components` splits the face
+  set and each gets its own `IfcFacetedBrep`, listed together in the
+  representation's items — which is how IFC describes a compound body.
+
+`dev/tests/test_ifc_writer.py` also writes a file and reads it back with
 `dev/schema/spf.py` — this project's own STEP reader, so the writer is checked
 by code that did not write it: instances parse, every reference resolves, the
 attribute counts come from the schema, the edited fields and psets are present,
