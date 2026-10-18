@@ -276,26 +276,43 @@ def ifc_class(p: dict) -> str:
 
 # ---- create / rebuild / erase ----------------------------------------------
 def create(scene, face, click: QVector3D, p: dict, name: str | None = None,
-           viewport=None) -> Group:
-    """Cut the wall and stand a door in it. Returns the container group.
+           viewport=None, placement: dict | None = None) -> Group:
+    """Stand a door or window in a wall. Returns the container group.
+
+    Two ways in, and the difference is the whole point of the walls layer:
+
+    * ``placement`` given — the opening already exists as **data** on a wall of
+      ours, and the wall has regenerated around it. Nothing is cut here; the
+      door simply stands in the hole, and keeps the host's id so the two follow
+      each other afterwards.
+    * no ``placement`` — the freeform path: the wall is faces, so the opening is
+      cut into it (:mod:`openings.opening`), and the record kept to close it.
 
     The parts are built *before* the wall is touched, so a geometry mistake
     cannot leave a hole with no door in it.
     """
     p = params_mod.normalize(p)
-    origin, across, into, up, depth, corners = opening_mod.plan(scene, face,
-                                                                click, p)
     ensure_materials(scene, p)
     ensure_layers(scene, p)
 
-    frame = {"origin": opening_mod.as_tuple(origin),
-             "x": opening_mod.as_tuple(across),
-             "y": opening_mod.as_tuple(into),
-             "z": opening_mod.as_tuple(up)}
+    if placement is not None:
+        frame = dict(placement["frame"])
+        depth = float(placement["depth"])
+        record = {}
+        host = {"wall": placement.get("wall"),
+                "opening": placement.get("opening")}
+    else:
+        origin, across, into, up, depth, corners = opening_mod.plan(
+            scene, face, click, p)
+        frame = {"origin": opening_mod.as_tuple(origin),
+                 "x": opening_mod.as_tuple(across),
+                 "y": opening_mod.as_tuple(into),
+                 "z": opening_mod.as_tuple(up)}
+        host = None
+        record = opening_mod.cut(scene, face, corners, depth)
+
     matrix = frame_matrix(frame)
     parts = build_parts(scene, p, depth, matrix)      # may raise: nothing cut yet
-
-    record = opening_mod.cut(scene, face, corners, depth)
 
     name = name or _next_name(scene, p["kind"])
     group = Group(name=name)
@@ -303,21 +320,25 @@ def create(scene, face, click: QVector3D, p: dict, name: str | None = None,
     group.component = False
     group.layer = params_mod.layer(p)
     group.ifc = {"class": ifc_class(p), "name": name}
-    group.ext = {params_mod.KEY: {"params": p, "frame": frame,
-                                  "outline": [opening_mod.as_tuple(q)
-                                              for q in corners],
-                                  "depth": depth,
-                                  "opened": False}}
+    stored = {"params": p, "frame": frame, "depth": depth, "opened": False}
+    if host is not None:
+        stored["host"] = host
+    else:
+        stored["outline"] = [opening_mod.as_tuple(q) for q in corners]
+    group.ext = {params_mod.KEY: stored}
     scene.groups.append(group)
 
     symbol = build_symbol(p, depth, matrix, params_mod.SYMBOL_LAYER)
     if symbol is not None:
         scene.groups.append(symbol)
 
-    doors = dict(registry(scene))
-    doors[group.uid] = {"record": record,
-                        "symbol": getattr(symbol, "uid", None)}
-    _write_registry(scene, doors)
+    # A hosted opening has no record to close: the wall owns its hole, and
+    # `hosting.remove` takes it out again. Only a cut needs the record.
+    if host is None:
+        doors = dict(registry(scene))
+        doors[group.uid] = {"record": record,
+                            "symbol": getattr(symbol, "uid", None)}
+        _write_registry(scene, doors)
     if viewport is not None:
         scene.selection = {group}
     return group
@@ -359,6 +380,23 @@ def preview(scene, face, click, p: dict):
 _PREVIEW = (0.63, 0.67, 0.76)
 
 
+def preview_placement(scene, p: dict, frame: dict, depth: float) -> list:
+    """The door's parts as preview faces at a known frame — what a hosted
+    placement will look like, without planning or cutting anything."""
+    from core.geometry import Face as PreviewFace
+
+    p = params_mod.normalize(p)
+    matrix = frame_matrix(frame)
+    out = []
+    for faces in geometry.parts(p, depth).values():
+        for loop, holes in faces:
+            out.append(PreviewFace(
+                vertices=[matrix.map(QVector3D(*q)) for q in loop],
+                holes=[[matrix.map(QVector3D(*q)) for q in h] for h in holes],
+                attrs={"color": (_PREVIEW[0], _PREVIEW[1], _PREVIEW[2])}))
+    return out
+
+
 def rebuild(scene, group, p: dict) -> None:
     """New parameters, same place — read from where the door stands now."""
     data = data_of(group)
@@ -388,6 +426,11 @@ def rebuild(scene, group, p: dict) -> None:
     group.ifc = {"class": ifc_class(p), "name": group.name}
 
     _replace_symbol(scene, group, p, depth, matrix)
+
+    # A hosted opening is data on its wall, so the hole has to follow too —
+    # this is the association: change the window and the wall opens up.
+    from . import hosting
+    hosting.resize(scene, group, p)
 
 
 def _replace_symbol(scene, group, p: dict, depth: float,
@@ -424,6 +467,11 @@ def erase(scene, group) -> bool:
         if victim is not None:
             scene.selection.discard(victim)
     _write_registry(scene, doors)
+
+    # A hosted opening lives on its wall: drop it and the wall closes up.
+    from . import hosting
+    if hosting.opening_of(scene, group)[0] is not None:
+        return hosting.remove(scene, group)
 
     record = entry.get("record")
     if not record:

@@ -96,6 +96,21 @@ def check_solid(name: str, faces) -> float:
     return volume
 
 
+def check_pieces(name: str, faces) -> float:
+    """A skin cut by an opening is several solid blocks, not one.
+
+    Each block is closed and measurable; the *set* is not a single closed
+    solid, because adjacent blocks share coplanar caps at the floor and at the
+    head. That is inherent to a composite object: what a take-off wants from a
+    wall is its skins, and from a skin its blocks — not one number for the
+    union. (The same reason a multi-skin wall reports nothing as one group.)
+    """
+    check(bool(faces), f"{name} has faces")
+    volume = geometry.volume(faces)
+    check(volume > 1e-9, f"{name} encloses a positive volume, got {volume!r}")
+    return volume
+
+
 # ---- the model --------------------------------------------------------------
 def test_model() -> None:
     w = walls.defaults()
@@ -238,6 +253,76 @@ def test_short_segment() -> None:
           "a 7 m run at walking pace does mitre")
 
 
+def test_openings_in_walls() -> None:
+    """A window in a wall is *data*, and the wall's geometry leaves room for it."""
+    plain = walls.normalize({"type": "binnenwand", "height": 2.7,
+                             "path": [[0, 0], [4, 0]]})
+    solid = geometry.volume(wall_geometry.skin_faces(plain)["Binnenblad"])
+
+    window = walls.normalize(dict(plain, openings=[
+        {"segment": 0, "start": 1.5, "width": 1.0, "sill": 0.9,
+         "height": 1.4}]))
+    equal(len(window["openings"]), 1, "the opening is kept as data")
+    built = wall_geometry.skin_faces(window)
+    check_pieces("Binnenblad", built["Binnenblad"])
+    close(geometry.volume(built["Binnenblad"]),
+          solid - 1.0 * 0.100 * 1.4,
+          "the wall loses exactly the opening: width × thickness × height")
+
+    # A door reaches the floor; a full-height opening leaves a gap.
+    door = walls.normalize(dict(plain, openings=[
+        {"segment": 0, "start": 1.5, "width": 1.0, "sill": 0.0,
+         "height": 2.1}]))
+    close(geometry.volume(wall_geometry.skin_faces(door)["Binnenblad"]),
+          solid - 1.0 * 0.100 * 2.1, "a door opening reaches the floor")
+
+    gap = walls.normalize(dict(plain, openings=[
+        {"segment": 0, "start": 1.5, "width": 1.0, "sill": 0.0,
+         "height": 2.7}]))
+    check_pieces("Binnenblad", wall_geometry.skin_faces(gap)["Binnenblad"])
+    close(geometry.volume(wall_geometry.skin_faces(gap)["Binnenblad"]),
+          solid - 1.0 * 0.100 * 2.7,
+          "an opening the full height of the wall leaves a gap")
+
+    # Every skin of a multi-skin wall is opened, each losing its own thickness.
+    thick = walls.normalize({"height": 2.7, "path": [[0, 0], [4, 0]],
+                             "openings": [{"segment": 0, "start": 1.5,
+                                           "width": 1.0, "sill": 0.9,
+                                           "height": 1.4}]})
+    total = 0.0
+    for name, faces in wall_geometry.skin_faces(thick).items():
+        check_pieces(name, faces)
+        close(geometry.volume(faces), 4.0 * 0.1 * 2.7 - 1.0 * 0.1 * 1.4,
+              f"{name} loses the opening through its own thickness")
+        total += geometry.volume(faces)
+    close(total, 3 * (4.0 * 0.1 * 2.7 - 1.0 * 0.1 * 1.4),
+          "and the wall's three skins add up")
+
+    # An opening in the second run of a mitred wall still leaves it closed.
+    turn = walls.normalize({"height": 2.7, "path": [[0, 0], [4, 0], [4, 3]],
+                            "openings": [{"segment": 1, "start": 1.0,
+                                          "width": 1.0, "sill": 0.9,
+                                          "height": 1.4}]})
+    turned = wall_geometry.skin_faces(turn)
+    for name, faces in turned.items():
+        check_pieces(name, faces)
+    without = wall_geometry.volume(
+        wall_geometry.skin_faces(dict(turn, openings=[])))
+    close(wall_geometry.volume(turned),
+          without - 1.0 * 0.300 * 1.4,
+          "the opening takes its slice out of the turned wall too")
+
+    # An opening is kept inside its segment, and a silly one is dropped.
+    clipped = walls.normalize({"path": [[0, 0], [2, 0]], "openings": [
+        {"segment": 0, "start": 1.8, "width": 3.0, "sill": 0.5,
+         "height": 1.0},
+        {"segment": 0, "start": 0.5, "width": 0.001, "height": 1.0}]})
+    equal(len(clipped["openings"]), 1, "the silly opening was dropped")
+    opening = clipped["openings"][0]
+    check(opening["start"] + opening["width"] <= 2.0 + 1e-9,
+          f"and the wide one was kept inside its 2 m segment: {opening}")
+
+
 def test_wall_object() -> None:
     """A wall in the document: one container, one part per skin, regenerating."""
     scene = app_stubs.Scene()
@@ -291,11 +376,65 @@ def test_wall_object() -> None:
     equal(scene.plugin_data, {}, "and nothing in the document data")
 
 
+def test_hosting() -> None:
+    """A window in one of our walls is data, and the two follow each other."""
+    scene = app_stubs.Scene()
+    viewport = app_stubs.Viewport(scene)
+    V = app_stubs.QVector3D
+
+    w = walls.normalize({"type": "binnenwand", "height": 2.7,
+                         "path": [[0, 0], [4, 0]]})
+    wall = wall_object.create(scene, w)
+    before = wall_geometry.volume(
+        wall_geometry.skin_faces(wall_object.wall_params(wall)))
+
+    door = params.normalize({"kind": "door"})
+    made: dict = {}
+    check(object_mod.run(viewport, lambda s: made.update(item=hosting.add(
+        s, wall, V(2.0, 0.15, 1.0), V(0.0, 1.0, 0.0), door))), "hosted")
+    item = made["item"]
+
+    equal(len(wall_object.wall_params(wall)["openings"]), 1,
+          "the wall now hosts one opening")
+    host = object_mod.data_of(item).get("host") or {}
+    equal(host.get("wall"), wall.uid, "and the window knows its wall")
+    equal(item.ifc.get("class"), "IfcDoor", "the door is still a door")
+    after = wall_geometry.volume(
+        wall_geometry.skin_faces(wall_object.wall_params(wall)))
+    close(before - after, door["width"] * 0.100 * door["height"],
+          "the wall lost exactly the door's slice of its 100 mm skin")
+
+    # ---- the association: resizing the window resizes the hole ----
+    wider = params.normalize(dict(door, width=door["width"] + 0.20))
+    object_mod.run(viewport, lambda s: object_mod.rebuild(s, item, wider),
+                   "", label="Opening")
+    opening = wall_object.wall_params(wall)["openings"][0]
+    close(opening["width"], wider["width"],
+          "the opening followed the window's new width")
+    resized = wall_geometry.volume(
+        wall_geometry.skin_faces(wall_object.wall_params(wall)))
+    close(before - resized, wider["width"] * 0.100 * wider["height"],
+          "and the wall opened up to match")
+
+    # ---- erasing the window closes the wall ----
+    object_mod.run(viewport, lambda s: object_mod.erase(s, item), "",
+                   label="Opening")
+    equal(wall_object.wall_params(wall)["openings"], [],
+          "the opening went with the window")
+    close(wall_geometry.volume(
+        wall_geometry.skin_faces(wall_object.wall_params(wall))), before,
+        "and the wall is whole again")
+
+    # ---- and one undo step puts it all back ----
+    while viewport.history.undo():
+        pass
+
+
 def main() -> int:
     install_package()
     app_stubs.install()
     global profiles, params, geometry, walls, wall_geometry, wall_object
-    global object_mod
+    global object_mod, hosting
     profiles = load("profiles")
     params = load("params")
     geometry = load("geometry")
@@ -304,13 +443,16 @@ def main() -> int:
     opening = load("opening")
     object_mod = load("object")
     wall_object = load("wall_object")
+    hosting = load("hosting")
 
     test_model()
     test_straight()
     test_three_skins()
     test_mitre()
     test_short_segment()
+    test_openings_in_walls()
     test_wall_object()
+    test_hosting()
 
     if failures:
         for failure in failures:

@@ -397,14 +397,49 @@ windows in *community extensions*).
 * `wall_panel.py` — the **Walls** panel: pick a build-up from
   `profiles.WALLS` (spouwmuur, binnenwand), edit its skins and height, draw.
 
-**Two traps found building it, both by test:**
+#### Openings live on the wall as data — `hosting.py`
+
+Place a door or window on **one of our walls** and nothing is cut: the opening
+is appended to the wall's own `openings` list, the wall regenerates with the
+hole, and the opening knows which wall and which opening it belongs to
+(`data["host"] = {"wall": uid, "opening": id}`). Then the two follow each other:
+
+* `object.rebuild` → `hosting.resize` changes the opening and regenerates the
+  wall, in the same undo step, so a wider window opens a wider hole;
+* `object.erase` → `hosting.remove` takes the opening out and the wall closes;
+* both are one undo step because they happen inside the same `object.run`.
+
+The frame is worked out by `hosting.placement`: the nearest segment to the
+click, the station along it, and the door's own frame taken from the **clicked
+face's normal** — so handedness and swing mean exactly what they mean on the
+freeform path. A hosted opening never keeps a close-record: the wall owns its
+hole.
+
+The tool asks `pick_face_any` for the owner first, because a wall of ours is a
+group and `pick_face` only answers with loose geometry; if the owner is one of
+our walls it takes the hosted path, otherwise the freeform cut.
+
+**Three traps found building it, all by test:**
 
 1. **A shared face is not a solid.** Building each segment of a mitred wall as
    its own prism left the mitre face *inside* the wall: every edge along it
    bordered four faces instead of two, so `core/bim.py` would have refused to
    report a volume at all. A run of mitred segments is therefore built as **one
    extruded band** — `runs()` finds the stretches that mitre as one.
-2. **A mitre through the vertex loses nothing.** The intuition that a turn
+2. **A piece boundary has to be monotonic along the path.** `_order` first
+   returned a constant for every station inside a segment, so openings were
+   sorted into place and then skipped as "already past". It is
+   `segment + distance / length` now — and it is only ever compared with
+   another boundary's order, never with a distance.
+3. **A skin cut by an opening is several solid blocks, not one.** Adjacent
+   blocks share coplanar caps at the floor and the head, so the *set* has edges
+   bordering four faces while each **block** is closed and measurable. That is
+   inherent to a composite object — the same reason a multi-skin wall reports
+   no single volume: `core/bim`'s `face_set_volume` measures one group's face
+   set, and a wall is by nature a stack of solids. Quantities for a wall
+   therefore belong to its skins (and its blocks), which is also what a take-off
+   wants: m² of brick, m² of insulation, m³ of block.
+4. **A mitre through the vertex loses nothing.** The intuition that a turn
    "loses the shared square" is true of a *butt* joint, not a mitre: with the
    path as the centre line the mitre line passes through the vertex, so each
    run keeps exactly length × thickness. The skin on the outside of a turn gets

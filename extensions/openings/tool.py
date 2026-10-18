@@ -24,6 +24,7 @@ from PySide6.QtGui import QVector3D
 
 from tools.base import Tool
 
+from . import hosting
 from . import opening as opening_mod
 from . import object as object_mod
 from . import params as params_mod
@@ -51,6 +52,7 @@ class DoorTool(Tool):
         self._face = None
         self._point = None
         self._reason = ""
+        self._hosted = None
         self._preview: list = []
 
     # ---- lifecycle ----
@@ -71,6 +73,7 @@ class DoorTool(Tool):
         self._face = None
         self._point = None
         self._reason = ""
+        self._hosted = None
         self._preview = []
 
     # ---- the cursor ----
@@ -89,14 +92,46 @@ class DoorTool(Tool):
         viewport = ctx.viewport
         x, y = ctx.screen.x(), ctx.screen.y()
         face = viewport.pick_face(x, y)
-        point = host.world_under_cursor(self.app, x, y) if face is not None \
-            else None
-        reason = "" if face is not None else self._why_not(viewport, x, y)
+
+        # A wall of ours is a group, so it is not in the loose mesh at all:
+        # ask the wider picker whether what is under the cursor belongs to one.
+        owner = self._host_owner(viewport, x, y)
+        hosted = None
+        if owner is not None:
+            any_pick = getattr(viewport, "pick_face_any", None)
+            picked, _group = any_pick(x, y)
+            if picked is not None:
+                hosted = (picked, owner)
+
+        point = host.world_under_cursor(self.app, x, y) \
+            if (face is not None or hosted is not None) else None
+        if hosted is not None:
+            reason = ""
+        elif face is not None:
+            reason = ""
+        else:
+            reason = self._why_not(viewport, x, y)
 
         changed = (face is not self._face or _key(point) != _key(self._point)
-                   or reason != self._reason)
+                   or reason != self._reason
+                   or (hosted or (None, None))[1] is not
+                   (self._hosted or (None, None))[1])
         self._face, self._point, self._reason = face, point, reason
+        self._hosted = hosted
         return changed
+
+    def _host_owner(self, viewport, x: float, y: float):
+        """The wall of ours under the cursor, when what is there belongs to one."""
+        from . import wall_object as wall_mod
+
+        any_pick = getattr(viewport, "pick_face_any", None)
+        if not callable(any_pick):
+            return None
+        try:
+            _face, owner = any_pick(x, y)
+        except Exception:                              # noqa: BLE001
+            return None
+        return owner if owner is not None and wall_mod.is_wall(owner) else None
 
     def _why_not(self, viewport, x: float, y: float) -> str:
         """Why no face was picked, in words the user can act on.
@@ -131,7 +166,8 @@ class DoorTool(Tool):
     def on_click(self, ctx) -> None:
         viewport = ctx.viewport
         self._rescan(ctx)
-        if self._face is None or self._point is None:
+        if (self._face is None or self._point is None) \
+                and self._hosted is None:
             viewport.flash_status(
                 self._reason or self._t("Point at a face of the wall you want "
                                         "the door or window in."), 5000)
@@ -143,6 +179,23 @@ class DoorTool(Tool):
             return
 
         placed: dict = {}
+
+        if self._hosted is not None:
+            # A wall of ours: the opening becomes data on it, and the wall
+            # regenerates around the hole. Nothing is cut.
+            picked, wall = self._hosted
+            normal = picked.normal()
+
+            def make_hosted(scene):
+                placed["item"] = hosting.add(scene, wall, self._point, normal,
+                                             parameters, viewport=viewport)
+
+            if object_mod.run(viewport, make_hosted, self._t("Placed")):
+                item = placed.get("item")
+                if item is not None:
+                    self.panel.show_opening(item)
+                self._rebuild(viewport)
+            return
 
         def make(scene):
             placed["item"] = object_mod.create(
@@ -161,6 +214,19 @@ class DoorTool(Tool):
         """Build the preview once per (face, point) rather than per paint: the
         plan reads the wall's far side, which is a scan of the mesh."""
         self._preview = []
+        if self._hosted is not None and self._point is not None:
+            picked, wall = self._hosted
+            parameters = self.panel.draft()
+            try:
+                frame, _opening, depth = hosting.placement(
+                    wall, self._point, picked.normal(), parameters)
+                self._preview = object_mod.preview_placement(
+                    viewport.scene, parameters, frame, depth)
+            except opening_mod.OpeningError as exc:
+                viewport.flash_status(str(exc), 5000)
+            except Exception:                          # noqa: BLE001
+                log.exception("openings: could not preview the opening")
+            return
         if self._face is None or self._point is None:
             if self._reason:
                 viewport.flash_status(self._reason, 6000)

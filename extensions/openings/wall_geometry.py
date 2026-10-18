@@ -190,8 +190,74 @@ def band_outline(w: dict, first: int, last: int,
     return side(offset0) + list(reversed(side(offset1)))
 
 
+def _station(w: dict, boundary: tuple, offset: float) -> tuple:
+    """The plan point of a piece boundary at ``offset``.
+
+    A boundary is either a vertex of the path — where the band turns, on its
+    mitre — or a station part-way along a segment, where an opening begins.
+    """
+    if boundary[0] == "vertex":
+        _tag, vertex, incoming = boundary
+        return corner(w, vertex, offset, incoming=incoming)
+    _tag, segment, distance = boundary
+    path = w["path"]
+    start, end = path[segment], path[segment + 1]
+    direction = _unit(_sub(end, start))
+    normal = _perp(direction)
+    return (start[0] + normal[0] * offset + direction[0] * distance,
+            start[1] + normal[1] * offset + direction[1] * distance)
+
+
+def _order(w: dict, boundary: tuple) -> float:
+    """Where a boundary sits along the path, in whole segments.
+
+    Monotonic, which is the whole point: a vertex is the start of its segment,
+    and a station is that segment plus how far along it the station is. Only
+    ever compared with another boundary's order — never with a distance.
+    """
+    if boundary[0] == "vertex":
+        return float(boundary[1])
+    _tag, segment, distance = boundary
+    path = w["path"]
+    length = math.hypot(path[segment + 1][0] - path[segment][0],
+                        path[segment + 1][1] - path[segment][1])
+    return float(segment) + distance / max(length, 1e-9)
+
+
+def band_between(w: dict, offset0: float, offset1: float,
+                 first: tuple, last: tuple) -> list:
+    """One skin's plan outline between two boundaries: out along one side,
+    back along the other, turning on the mitre at any vertex in between."""
+    low, high = _order(w, first), _order(w, last)
+
+    def side(offset: float) -> list:
+        out = [_station(w, first, offset)]
+        for vertex in range(1, len(w["path"]) - 1):
+            if low + 1e-9 < float(vertex) < high - 1e-6:
+                out.append(corner(w, vertex, offset))
+        out.append(_station(w, last, offset))
+        return out
+
+    return side(offset0) + list(reversed(side(offset1)))
+
+
+def _extrude(w: dict, offset0: float, offset1: float,
+             first: tuple, last: tuple, low: float, high: float) -> list:
+    outline = band_between(w, offset0, offset1, first, last)
+    if len(outline) < 3 or _area(outline) < 1e-9:
+        return []
+    return geometry.prism(outline, [], low, high, plane="xy")
+
+
 def skin_faces(w: dict) -> dict:
     """``{skin name: [face, …]}`` — the whole wall, one solid per run per skin.
+
+    An **opening** splits its run into pieces: the wall either side of it, and
+    what is left above and below it. Each piece is a closed solid of its own,
+    which is what keeps a wall with a hole in it measurable — two solids that
+    merely *shared* a face would leave that face inside the wall and every edge
+    along it bordering four faces, and ``core/bim.py`` would report no volume
+    at all.
 
     One part per skin, so the Parts tray reads like the build-up does:
     Buitenblad, Isolatie, Binnenblad, each with its own material and its own
@@ -201,6 +267,7 @@ def skin_faces(w: dict) -> dict:
     if len(w["path"]) < 2 or not w["skins"]:
         return {}
     base, height = w["base"], w["height"]
+    top = base + height
     stretches = runs(w)
     out: dict = {}
 
@@ -209,11 +276,34 @@ def skin_faces(w: dict) -> dict:
         for first, last in stretches:
             if last <= first:
                 continue
-            outline = band_outline(w, first, last, offset0, offset1)
-            if len(outline) < 3 or _area(outline) < 1e-9:
-                continue                   # a degenerate joint: nothing to build
-            faces.extend(geometry.prism(outline, [], base, base + height,
-                                        plane="xy"))
+            hosted = [opening for opening in w["openings"]
+                      if first <= opening["segment"] < last]
+            hosted.sort(key=lambda item: (item["segment"], item["start"]))
+
+            cursor = ("vertex", first, False)
+            for opening in hosted:
+                start = ("at", opening["segment"], opening["start"])
+                end = ("at", opening["segment"],
+                       opening["start"] + opening["width"])
+                if _order(w, start) <= _order(w, cursor) + 1e-6:
+                    continue                    # already past it: skip
+                faces += _extrude(w, offset0, offset1, cursor, start,
+                                  base, top)
+
+                sill = base + opening["sill"]
+                head = sill + opening["height"]
+                if sill > base + 1e-6:
+                    faces += _extrude(w, offset0, offset1, start, end,
+                                      base, sill)
+                if head < top - 1e-6:
+                    faces += _extrude(w, offset0, offset1, start, end,
+                                      head, top)
+                cursor = end
+
+            end_boundary = ("vertex", last, True)
+            if _order(w, end_boundary) > _order(w, cursor) + 1e-6:
+                faces += _extrude(w, offset0, offset1, cursor, end_boundary,
+                                  base, top)
         if faces:
             out[skin["name"]] = faces
     return out

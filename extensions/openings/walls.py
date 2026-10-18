@@ -22,6 +22,8 @@ Pure data: no Qt, no scene, no imports from the application.
 """
 from __future__ import annotations
 
+import math
+
 from . import profiles
 
 #: The key in ``group.ext``. The same document-data namespace as the openings:
@@ -103,13 +105,52 @@ def normalize(raw: dict | None) -> dict:
             break
     out["skins"] = skins or out["skins"]
 
-    out["openings"] = [dict(item) for item in (raw.get("openings") or ())
-                       if isinstance(item, dict)]
+    out["openings"] = _openings(raw.get("openings"), path, out["height"])
+    return out
+
+
+def _openings(raw, path, wall_height: float) -> list:
+    """The hosted openings, each kept inside its segment and the wall.
+
+    An opening is *data*: which segment, how far along it, how wide, and how far
+    above the wall's base. It is normalised against the path and the height
+    here, so the generator can trust every number it gets — an opening hanging
+    off the end of a segment would otherwise build nonsense.
+    """
+    lengths = [(math.hypot(b[0] - a[0], b[1] - a[1])) for a, b in zip(path,
+                                                                     path[1:])]
+    out = []
+    for index, item in enumerate(raw or ()):
+        if not isinstance(item, dict) or not lengths:
+            continue
+        segment = int(_number(item.get("segment"), 0.0, 0.0, len(lengths) - 1))
+        length = lengths[segment]
+        width = _number(item.get("width"), 0.0, 0.0, length)
+        height = _number(item.get("height"), 0.0, 0.0, wall_height)
+        if width < 0.02 or height < 0.02:
+            continue
+        # Kept a little inside the segment: an opening flush with a corner is
+        # not an opening, it is the end of the wall.
+        low, high = 0.01, max(length - 0.01, 0.02)
+        width = min(width, high - low)
+        if width < 0.02:
+            continue
+        start = min(max(_number(item.get("start"), 0.0, low, high - width),
+                        low), max(high - width, low))
+        sill = _number(item.get("sill"), 0.0, 0.0,
+                       max(wall_height - height, 0.0))
+        out.append({
+            "id": str(item.get("id") or f"opening-{index + 1}"),
+            "segment": segment,
+            "start": start,
+            "width": width,
+            "sill": sill,
+            "height": min(height, wall_height - sill),
+        })
     return out
 
 
 def _number(raw, fallback: float, low: float, high: float) -> float:
-    import math
     try:
         value = float(raw)
     except (TypeError, ValueError):
