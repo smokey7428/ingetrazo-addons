@@ -25,12 +25,74 @@ constraints and the design are below.
 a wall, Revit-style, with a plan symbol and their IFC data. Built; see its own
 section below.
 
+## Where this stands, and where to pick up
+
+**Built and installed** (symlinked into `~/.local/share/ingetrazo/plugins/`):
+
+| Extension | What it does |
+| --- | --- |
+| `ifc_editor` | **IFC data — read and edit.** Every attribute of a tagged element (driven by the schema tables, all 776 IFC4 entities) and every property set, in a tray panel that follows the selection. **Export IFC (full)** writes an `.ifc` carrying all of it — validated against ifcopenshell 0.9.0.post1, 0 schema messages. |
+| `openings` | **Walls, doors and windows.** Multi-skin walls drawn along a polyline (mitred, Dutch build-ups), parametric doors and windows **hosted in them as data** (change the window → the hole follows; erase it → the wall closes), the plan symbol + Plan/Elevation/3D scenes, and a **Take-off** panel per skin. |
+
+**Published** — repo `smokey7428/ingetrazo-addons` (public), tags
+`ifc_editor-v1.0` and `openings-v1.0` with the zips attached, and catalog PR
+**ingelibre/ingetrazo-extensions#101**.
+
+**No personal name is published anywhere, on purpose.** File headers say
+`Copyright (C) 2026 the ingetrazo-addons contributors.`, the catalog `author` is
+the GitHub handle, and commits are authored as
+`smokey7428 <smokey7428@users.noreply.github.com>`. Before any further release:
+`grep -rn "Eric Smook" . | grep -v reference/` must come back empty.
+
+### Releasing
+
+```bash
+python3 dev/release.py                  # zips into dist/, entries into catalog/
+git tag openings-v1.0 && git push --tags   # the catalog pins to a TAG, never a branch
+gh release create openings-v1.0 dist/openings-1.0.zip -t "…" -n "…"
+```
+
+The zips are built with **fixed timestamps and permissions**, so the same source
+gives the same bytes and the same SHA-256 — a release whose hash moves on every
+build is one nobody can review. `dev/release.py` writes the catalog entries from
+the same run, so the entry and the artefact cannot drift. `dist/` is gitignored:
+the zips are release assets, not repo content.
+
+### Next, in the order I would do it
+
+1. **IFC2X3 export.** The layout is already table-driven; the work is the *class
+   vocabulary* (`IfcWallStandardCase` and friends, `PredefinedType` on the type
+   entities). The user's own project files are IFC2X3, so this is what makes the
+   export useful on real work.
+2. **Answer the reviewer on PR #101** if they push back on the private tool
+   registration (`host.py` explains it; the PR body discloses it first).
+3. **Wall quantities in the core's BIM panel** — impossible today (it measures
+   one group's face set and a wall is a stack of solids). Our Take-off panel does
+   it; upstream's common-BIM-API roadmap item is where it belongs.
+4. Smaller: standard-size presets in the panels (the data is in `profiles.py`),
+   a valraam/draaikiepraam (horizontal hinge), and `IfcOpeningElement` for the
+   *freeform* openings too (today only our walls' openings are written).
+
+### Two decisions already made, so they are not re-litigated
+
+* **Two catalog entries, not three.** "Walls" and "openings" are one extension
+  because an opening is hosted in a wall and **extensions cannot depend on each
+  other** — splitting would mean duplicating the wall generator in two packages
+  and keeping them in step by hand. The `openings` entry is *named* "Walls, doors
+  and windows" so the catalog reads correctly.
+* **The interactive tool uses private host API** (`MainWindow._tools`,
+  `_activate_tool`), because 0.5.8 offers no public registration. Isolated in
+  `openings/host.py`, guarded, and disclosed in the PR rather than discovered.
+
 ## Layout of this project
 
 ```
 Ingetrazo/
 ├── AGENTS.md            # this file
 ├── README.md
+├── LICENSE              # GPL-3.0-or-later, as the core requires
+├── catalog/             # the community-catalog entries, generated with the hashes
+├── dist/                # the release zips (gitignored: they are release assets)
 ├── extensions/          # OUR add-ons — one .py file or one package dir each
 │   ├── ifc_editor/          # the IFC field/property editor
 │   │   ├── __init__.py      # setup(app): the panel + the Extensions-menu entry
@@ -53,6 +115,7 @@ Ingetrazo/
 │   ├── check.sh         # compile + contract-check + schema-table check
 │   ├── test.sh          # run every test in dev/schema and dev/tests
 │   ├── lint.py          # "does it register anything?" — AST check, run by check.sh
+│   ├── release.py       # reproducible zips + the catalog entries
 │   ├── tests/           # extension tests, with stubs for core.* and PySide6
 │   └── schema/          # IFC schema tables: fetch, generate, test (see its README)
 └── reference/           # shallow clones of upstream (gitignored, read-only)
@@ -325,6 +388,7 @@ its symbol behind — hence a "Refresh plan symbols" command.
 | `tool.py` | `DoorTool` — click a wall, see the opening previewed, click to cut it. Stays active so a plan can be worked through. |
 | `panel.py` | The **Openings** tab: the settings for the next door with nothing selected, or the selected door's parameters, rebuilding it where it stands. Changes are coalesced on a short timer — one undo step per settled change, not per arrow key. |
 | `scenes.py` | The Plan / Elevation / 3D scenes, and `refresh` to put a moved door's symbol back. |
+| `schedule.py`, `takeoff_panel.py` | **The Take-off**: per-skin m²/m³/kg and the doors and windows by size, with a CSV of the same rows. Pure rows in `schedule.py`, so the numbers are tested without Qt. |
 | `walls.py`, `wall_geometry.py`, `wall_object.py`, `wall_tool.py`, `wall_panel.py` | **A wall of our own**: skins along a polyline, mitred, regenerated from its parameters — so the wall keeps being a wall. The **Walls** panel configures the build-up and **Draw a wall** draws it. |
 | `profiles.py` | **The Dutch standards**, in one place: timber sections (kozijnhout 67 × 114, raamhout 54 × 67), glazing (hr++ 20 mm), and the window and door types with their sizes and Dutch names. Adding a type later is a line of data here, not a change to the geometry. |
 | `__init__.py` | `setup(app)`: panel, tool, its own submenu, a right-click entry and the Browser's Type column. |
@@ -805,6 +869,20 @@ classification data to a user should name buildingSMART.
   Qt hands the focus on — which in a tabbed tray means another panel's tab. Compare
   a signature of the record and rebuild only when it differs; set that signature
   around our own writes so the notification they cause does not rebuild.
+* **An illegal enumeration writes as nothing, silently.** `SINGLEPANEL` is a
+  window's `PartitioningType`, not its `PredefinedType`; written anyway,
+  ifcopenshell read it back as `None` **and reported nothing**. `literal()` now
+  checks every enum value against that attribute's own list and emits `$` — a
+  value from the wrong enum is worse than no value, because it looks like data.
+  Only validating against a *real* consumer found this.
+* **An `IfcClosedShell` must be one connected solid.** A multi-skin wall, or a
+  skin cut into blocks by its openings, is several solids: `_components` splits
+  the face set by shared corners and each gets its own `IfcFacetedBrep`, listed
+  together in the representation's items.
+* **A released artefact must be reproducible.** A zip with live timestamps has a
+  different SHA-256 every build, and the catalog pins the hash — so
+  `dev/release.py` writes fixed timestamps and permissions. Rebuild and compare
+  the hash before tagging.
 * A stub that is *wrong* hides real bugs as effectively as real code: the
   class-change rebuild looked broken until `takeAt` was stubbed to Qt's shape,
   and a no-op `narrow()` in the stub hid that it shrinks a button to a 40 px
