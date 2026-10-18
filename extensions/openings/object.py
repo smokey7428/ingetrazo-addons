@@ -497,13 +497,19 @@ class DoorCommand(Command):
         scene.version += 1
 
 
-def run(viewport, mutate, ok_message: str = "") -> bool:
+def run(viewport, mutate, ok_message: str = "",
+        label: str = "Opening") -> bool:
     """Do ``mutate`` as one undo step and refresh; False when it failed, with
-    the reason already flashed to the user by the caller."""
+    the reason flashed to the user.
+
+    The same command serves a wall and an opening: both are groups whose
+    geometry is regenerated from parameters, so both need exactly this much
+    captured to undo.
+    """
     history = viewport.history
     history.execute(DoorCommand(mutate))
     if history.last_error:
-        viewport.flash_status(f"Door: {history.last_error}", 6000)
+        viewport.flash_status(f"{label}: {history.last_error}", 6000)
         return False
     notify = getattr(viewport, "notify_scene_changed", None)
     if callable(notify):

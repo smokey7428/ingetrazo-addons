@@ -57,6 +57,17 @@ _TEXTS = {
             "Devuelve el símbolo de barrido de cada puerta a donde está ahora "
             "la puerta.",
         "Doors — plan": "Puertas — planta",
+        "Walls": "Muros",
+        "Wall": "Muro",
+        "Draw a wall…": "Dibujar un muro…",
+        "Walls panel…": "Panel de muros…",
+        "Place a door or window…": "Colocar una puerta o ventana…",
+        "Draw a wall along a polyline, built from the panel's skins.":
+            "Dibuja un muro por una polilínea, construido con las capas del "
+            "panel.",
+        "Draw a wall along a polyline, built up from the panel's skins.":
+            "Dibuja un muro por una polilínea, construido con las capas del "
+            "panel.",
         "Point at a face of a wall and click to place the opening. The wall "
         "must not be inside a group. Esc when you are done.":
             "Apunta a una cara de un muro y haz clic para colocar el hueco. El "
@@ -85,11 +96,28 @@ def setup(app) -> None:
     from .object import is_opening
     from .panel import OpeningsPanel
     from .tool import TOOL_KEY, DoorTool
+    from .wall_object import is_wall
+    from .wall_panel import WallsPanel
+    from .wall_tool import TOOL_KEY as WALL_TOOL_KEY
+    from .wall_tool import WallTool
 
     panel = OpeningsPanel(app)
     dock = app.add_panel(_t("Openings"), panel)
     panel.attach_dock(dock)
     _remember(panel)
+
+    # Walls are a panel of their own, beside the openings': one is what you
+    # draw, the other is what you put in it.
+    walls_panel = WallsPanel(app)
+    walls_dock = app.add_panel(_t("Walls"), walls_panel, name="walls")
+    walls_panel.attach_dock(walls_dock)
+    _remember(walls_panel)
+
+    wall_tool = WallTool(app, walls_panel, _t)
+    if host.register(app, WALL_TOOL_KEY, wall_tool, _t("Wall"),
+                     _t("Draw a wall along a polyline, built from the panel's "
+                        "skins.")):
+        walls_panel.attach_tool(wall_tool)
 
     tool = DoorTool(app, panel, _t)
     if host.register(app, TOOL_KEY, tool, _t("Door"),
@@ -104,8 +132,12 @@ def setup(app) -> None:
     # of the two that matter most.
     sub = app.add_menu(_t("Doors & windows"))
     if sub is not None:
-        sub.addAction(_t("Place…"),
+        sub.addAction(_t("Place a door or window…"),
                       lambda: host.activate(app, TOOL_KEY))
+        sub.addAction(_t("Draw a wall…"),
+                      lambda: host.activate(app, WALL_TOOL_KEY))
+        sub.addAction(_t("Walls panel…"),
+                      lambda: app.show_panel(walls_dock))
         sub.addAction(_t("Edit…"), lambda: app.show_panel(dock))
         sub.addAction(_t("Erase"), panel._on_erase)
         sub.addSeparator()
@@ -180,6 +212,18 @@ def _outliner_kind(group) -> dict | None:
     from . import object as object_mod
     from . import params as params_mod
     from . import profiles
+
+    from . import wall_object as wall_mod
+
+    wall_data = wall_mod.data_of(group)
+    if wall_data is not None:
+        w = wall_mod.walls.normalize(wall_data)
+        return {"type": "Wall", "props": [
+            ("Build-up", f"{len(w['skins'])} skins, "
+                         f"{wall_mod.walls.total_thickness(w) * 1000:.0f} mm"),
+            ("Length", f"{wall_mod.walls.length(w):.2f} m"),
+            ("Height", f"{w['height']:.2f} m"),
+        ]}
 
     data = object_mod.data_of(group)
     if data is not None:

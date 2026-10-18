@@ -78,6 +78,7 @@ Two rules worth repeating:
 | --- | --- |
 | `extensions/ifc_editor/` | Edit every IFC attribute and property set of a tagged element — 776 IFC4 entities and 513 property sets, or 653/317 for IFC2X3. Its own `.ifc` writer (so the edits reach a file) is still to come. |
 | `extensions/openings/` | Parametric doors and windows cut into walls by clicking, with a plan symbol and the scenes that show it in the right view. Defaults are Dutch standard sizes for wooden frames — kozijnhout 67 × 114, raamhout 54 × 67, 20 mm glass — all in one catalogue (`openings/profiles.py`). The wall must be **loose geometry**: a wall inside a group cannot be cut until that group is open, and the tool says so. |
+| `extensions/openings/` (Walls) | A wall of our own: a **multi-skin** wall drawn as a polyline, centred on the line you draw and mitred where it turns — buitenblad / isolatie / binnenblad as separate parts with their own materials and volumes, all generated from the panel's parameters. This is what makes a wall stay a wall. Openings in *these* walls, associatively, is the next step. |
 | `extensions/hello_ingetrazo.py` | Smoke test that proves the toolchain (menu entry, tray panel, document data, model counting). Safe to delete once a real extension exists. |
 
 ```bash

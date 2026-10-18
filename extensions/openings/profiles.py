@@ -53,6 +53,31 @@ GLASS = {
     "triple": 28 * MM,
 }
 
+#: Wall build-ups, the way Dutch practice builds them. A skin is
+#: ``(name, thickness, material)``, listed from the outside in; the wall is
+#: centred on the line it is drawn along, so the list reads left to right as you
+#: walk the path. Adding a build-up later is a line of data.
+WALLS = {
+    "spouwmuur": {
+        "nl": "Spouwmuur",
+        "en": "Cavity wall",
+        "height": 2700 * MM,
+        "skins": [
+            ("Buitenblad", 100 * MM, "Brick"),
+            ("Isolatie", 100 * MM, "Insulation"),
+            ("Binnenblad", 100 * MM, "Block"),
+        ],
+    },
+    "binnenwand": {
+        "nl": "Binnenwand",
+        "en": "Inner wall",
+        "height": 2700 * MM,
+        "skins": [
+            ("Binnenblad", 100 * MM, "Block"),
+        ],
+    },
+}
+
 #: The window types. ``sash`` names the section of the part that opens;
 #: ``None`` is a fixed window, which has none.
 WINDOWS = {
@@ -121,6 +146,9 @@ def glass_thickness(name: str | None) -> float:
 
 
 def types(kind: str) -> dict:
+    """The catalogue a kind draws its defaults from."""
+    if kind == "wall":
+        return WALLS
     return WINDOWS if kind == "window" else DOORS
 
 

@@ -307,7 +307,8 @@ def main() -> int:
 
     # ---- setup(app) ----
     extension.setup(app)
-    equal(list(app.panels), ["Openings"], "setup adds the Openings panel")
+    equal(list(app.panels), ["Openings", "Walls"],
+          "setup adds the Openings panel and the Walls panel")
     panel = app.panels["Openings"].widget
     check(panel._dock is not None, "the panel knows its own tab")
     check(bool(app.menus), "and the extension has its own submenu")
@@ -324,8 +325,8 @@ def main() -> int:
               f"and has room for its label: {button.minimumWidth()}")
 
     # The interactive tool went in through the guarded shim.
-    equal(list(window._tools), [tool_mod.TOOL_KEY],
-          "the door tool was registered in the host's tool table")
+    equal(sorted(window._tools), ["openings_door", "openings_wall"],
+          "both tools were registered in the host's tool table")
     check(panel._tool is not None, "and the panel can reach it")
     extension._raise_panel()
     equal(app.shown, app.panels["Openings"], "the menu entry brings the panel up")

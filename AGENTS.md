@@ -325,6 +325,7 @@ its symbol behind — hence a "Refresh plan symbols" command.
 | `tool.py` | `DoorTool` — click a wall, see the opening previewed, click to cut it. Stays active so a plan can be worked through. |
 | `panel.py` | The **Openings** tab: the settings for the next door with nothing selected, or the selected door's parameters, rebuilding it where it stands. Changes are coalesced on a short timer — one undo step per settled change, not per arrow key. |
 | `scenes.py` | The Plan / Elevation / 3D scenes, and `refresh` to put a moved door's symbol back. |
+| `walls.py`, `wall_geometry.py`, `wall_object.py`, `wall_tool.py`, `wall_panel.py` | **A wall of our own**: skins along a polyline, mitred, regenerated from its parameters — so the wall keeps being a wall. The **Walls** panel configures the build-up and **Draw a wall** draws it. |
 | `profiles.py` | **The Dutch standards**, in one place: timber sections (kozijnhout 67 × 114, raamhout 54 × 67), glazing (hr++ 20 mm), and the window and door types with their sizes and Dutch names. Adding a type later is a line of data here, not a change to the geometry. |
 | `__init__.py` | `setup(app)`: panel, tool, its own submenu, a right-click entry and the Browser's Type column. |
 
@@ -373,6 +374,42 @@ carries the leaf sizes a binnendeur is stocked in (630/730/830/930/1030 ×
 The panel's **kind and type** convert the opening in front of you, like every
 other field — so a door can be turned into a window in one undo step, and a vast
 raam into a draairaam (which keeps the size and adds the sash).
+
+### Walls of our own — the answer to "the wall stops being a wall"
+
+Because the core has no wall object, an opening cut into freeform geometry is
+topology surgery: the wall stops being anything. So the extension now ships a
+**wall of its own**, which is the only way this can work without waiting for the
+core (upstream's ROADMAP item 4 explicitly puts walls, openings, doors and
+windows in *community extensions*).
+
+* `walls.py` — the model: a plan **path**, a **height** and a list of **skins**
+  (`name`, `thickness`, `material`) from the outside in, kept in `group.ext`.
+  The wall is **centred on the path**, so the skins sit half on either side of
+  what was drawn, the way a wall is drawn in a plan.
+* `wall_geometry.py` — one **closed solid per skin**, generated from those
+  numbers. Multi-skin is the point: a spouwmuur is buitenblad / isolatie /
+  binnenblad, three parts, three materials, three volumes.
+* `wall_object.py` — the container tagged `IfcWall`, one nested group per skin.
+* `wall_tool.py` — draw it like a polyline: click points along the centre line,
+  Enter or a double-click finishes, Backspace steps back, Esc cancels. The
+  preview is the **real** wall (same generator), skins and all.
+* `wall_panel.py` — the **Walls** panel: pick a build-up from
+  `profiles.WALLS` (spouwmuur, binnenwand), edit its skins and height, draw.
+
+**Two traps found building it, both by test:**
+
+1. **A shared face is not a solid.** Building each segment of a mitred wall as
+   its own prism left the mitre face *inside* the wall: every edge along it
+   bordered four faces instead of two, so `core/bim.py` would have refused to
+   report a volume at all. A run of mitred segments is therefore built as **one
+   extruded band** — `runs()` finds the stretches that mitre as one.
+2. **A mitre through the vertex loses nothing.** The intuition that a turn
+   "loses the shared square" is true of a *butt* joint, not a mitre: with the
+   path as the centre line the mitre line passes through the vertex, so each
+   run keeps exactly length × thickness. The skin on the outside of a turn gets
+   longer, the one on the inside shorter, and the wall's total is conserved —
+   that is the assertion to make, not a per-skin one.
 
 ### A wall inside a group cannot be cut
 
