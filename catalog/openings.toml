@@ -1,12 +1,12 @@
 id = "openings"
-version = "1.0"
+version = "1.1"
 author = "smokey7428"
 author_url = "https://github.com/smokey7428"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/smokey7428/ingetrazo-addons"
-download = "https://github.com/smokey7428/ingetrazo-addons/releases/download/openings-v1.0/openings-1.0.zip"
-sha256 = "d184f98ecbcc331698d1a56675f84f4536a1df2233b6e51cddfb529d73e45c71"
-ingetrazo = "0.5.8"
+download = "https://github.com/smokey7428/ingetrazo-addons/releases/download/openings-v1.1/openings-1.1.zip"
+sha256 = "a6618fe3bbb3703bac8d884dc8a7b3aa4af06e8994095f9c24e8c463d7bdb7e2"
+ingetrazo = "0.5.9"
 tags = ["architecture", "bim", "structures"]
 
 [name]

@@ -6,7 +6,7 @@ license = "GPL-3.0-or-later"
 repository = "https://github.com/smokey7428/ingetrazo-addons"
 download = "https://github.com/smokey7428/ingetrazo-addons/releases/download/ifc_editor-v1.0/ifc_editor-1.0.zip"
 sha256 = "17f929157c3084d98c4b3b54590907dda41c1f253cfbf0979976566bad664c0e"
-ingetrazo = "0.5.8"
+ingetrazo = "0.5.9"
 tags = ["bim", "import-export"]
 
 [name]

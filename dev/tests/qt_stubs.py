@@ -587,9 +587,23 @@ def install() -> None:
     views = types.ModuleType("views")
     views.__path__ = []
     views.fold_section = fold
+    dialogs = types.ModuleType("views.filedialogs")
+
+    class _FileDialogs:
+        @staticmethod
+        def getSaveFileName(*_a, **_k):
+            return "", ""          # the user cancelled: nothing to write
+
+        @staticmethod
+        def getOpenFileName(*_a, **_k):
+            return "", ""
+
+    dialogs.file_dialogs = _FileDialogs
     shortcuts = types.ModuleType("views.shortcuts")
     shortcuts.set_tooltip = lambda action, tip: action.setToolTip(tip)
     views.shortcuts = shortcuts
     sys.modules["views"] = views
     sys.modules["views.fold_section"] = fold
     sys.modules["views.shortcuts"] = shortcuts
+    views.filedialogs = dialogs
+    sys.modules["views.filedialogs"] = dialogs

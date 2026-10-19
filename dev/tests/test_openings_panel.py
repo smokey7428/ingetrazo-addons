@@ -315,6 +315,23 @@ def main() -> int:
     equal(len(app.context_menus), 1, "and a right-click entry")
     equal(len(app.outliner_kinds), 1, "and a Type column for the Browser")
 
+    # ---- every menu entry must actually run ----
+    # A lambda in `setup` closes over that function's locals, so a name that was
+    # never imported there fails only when the entry is clicked — in the app, in
+    # front of the user. The maintainer found exactly that: «Make plan /
+    # elevation / 3D» raised NameError: name 'params_mod' is not defined.
+    for menu in app.menus:
+        if isinstance(menu, tuple):
+            continue
+        for entry in menu.actions:
+            text, call = entry[0], entry[1]
+            try:
+                call()
+            except Exception as exc:                   # noqa: BLE001
+                failures.append(f"menu entry {text!r} raised "
+                                f"{type(exc).__name__}: {exc}")
+    check(True, "every Extensions-menu entry ran")   # counted above
+
     # The two buttons must be readable. `narrow()` would set Ignored's size
     # policy, and in a row with a stretch that shrinks a button to a 40 px
     # sliver — a button you cannot see is a button you do not have.

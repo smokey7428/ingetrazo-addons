@@ -94,7 +94,7 @@ def _t(text: str, **kw) -> str:
 
 def setup(app) -> None:
     """Called once, when the main window is built."""
-    from . import host, scenes
+    from . import host, params as params_mod, scenes
     from .object import is_opening
     from .panel import OpeningsPanel
     from .tool import TOOL_KEY, DoorTool

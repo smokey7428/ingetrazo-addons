@@ -35,8 +35,11 @@ section below.
 | `openings` | **Walls, doors and windows.** Multi-skin walls drawn along a polyline (mitred, Dutch build-ups), parametric doors and windows **hosted in them as data** (change the window → the hole follows; erase it → the wall closes), the plan symbol + Plan/Elevation/3D scenes, and a **Take-off** panel per skin. |
 
 **Published** — repo `smokey7428/ingetrazo-addons` (public), tags
-`ifc_editor-v1.0` and `openings-v1.0` with the zips attached, and catalog PR
+`ifc_editor-v1.0` and `openings-v1.1` with the zips attached, and catalog PR
 **ingelibre/ingetrazo-extensions#101**.
+
+A maintainer reviewed both in **IngeTrazo 0.5.9**: `ifc_editor` passed
+everything; `openings` had one broken menu entry (below), fixed in 1.1.
 
 **No personal name is published anywhere, on purpose.** File headers say
 `Copyright (C) 2026 the ingetrazo-addons contributors.`, the catalog `author` is
@@ -51,6 +54,11 @@ python3 dev/release.py                  # zips into dist/, entries into catalog/
 git tag openings-v1.0 && git push --tags   # the catalog pins to a TAG, never a branch
 gh release create openings-v1.0 dist/openings-1.0.zip -t "…" -n "…"
 ```
+
+`dev/release.py` keeps a **version per entry** (`VERSIONS`): a fix to one
+extension must not force a new tag and a new hash on the other, or reviewers
+read code that did not change. Bumping `openings` to 1.1 left
+`ifc_editor-1.0.zip` byte-identical, hash and all.
 
 The zips are built with **fixed timestamps and permissions**, so the same source
 gives the same bytes and the same SHA-256 — a release whose hash moves on every
@@ -879,6 +887,14 @@ classification data to a user should name buildingSMART.
   skin cut into blocks by its openings, is several solids: `_components` splits
   the face set by shared corners and each gets its own `IfcFacetedBrep`, listed
   together in the representation's items.
+* **A lambda in `setup(app)` closes over that function's locals — a name not
+  imported *there* fails only when the entry is clicked.** «Make plan /
+  elevation / 3D» raised `NameError: name 'params_mod' is not defined` for the
+  maintainer, in the app, because the import had been added to the module
+  instead of to `setup`. Nothing caught it because no test ever *called* a menu
+  action. `test_openings_panel.py` now invokes every entry of every menu it
+  recorded, which reproduces that exact error when the import is taken out —
+  verified by removing it again.
 * **A released artefact must be reproducible.** A zip with live timestamps has a
   different SHA-256 every build, and the catalog pins the hash — so
   `dev/release.py` writes fixed timestamps and permissions. Rebuild and compare

@@ -37,7 +37,12 @@ AUTHOR = "smokey7428"
 AUTHOR_URL = "https://github.com/smokey7428"
 
 #: The IngeTrazo version they were tested with.
-INGETRAZO = "0.5.8"
+INGETRAZO = "0.5.9"
+
+#: One version per entry: a fix to one extension must not force a new tag, and a
+#: new hash, on the other — the catalog pins the SHA-256, and re-releasing an
+#: unchanged artefact makes reviewers read code that did not change.
+VERSIONS = {"ifc_editor": "1.0", "openings": "1.1"}
 
 #: One entry per extension: what it is called and what it says it does, in the
 #: three languages the catalog asks for.
@@ -160,12 +165,11 @@ def entry_toml(name: str, version: str, digest: str) -> str:
 
 
 def main(argv: list[str]) -> int:
-    version = "1.0"
-    if "--version" in argv:
-        version = argv[argv.index("--version") + 1]
+    override = argv[argv.index("--version") + 1] if "--version" in argv else None
     CATALOG.mkdir(parents=True, exist_ok=True)
 
     for name in ENTRIES:
+        version = override or VERSIONS.get(name, "1.0")
         zip_path = build_zip(name, version)
         digest = sha256(zip_path)
         toml = CATALOG / f"{name}.toml"
@@ -177,7 +181,7 @@ def main(argv: list[str]) -> int:
         print(f"  entry  {toml.relative_to(ROOT)}")
     print("\nTag each one in the repository before submitting:")
     for name in ENTRIES:
-        print(f"  {name}-v{version}")
+        print(f"  {name}-v{override or VERSIONS.get(name, '1.0')}")
     return 0
 
 
