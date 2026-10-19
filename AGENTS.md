@@ -66,6 +66,36 @@ build is one nobody can review. `dev/release.py` writes the catalog entries from
 the same run, so the entry and the artefact cannot drift. `dist/` is gitignored:
 the zips are release assets, not repo content.
 
+### Watching upstream
+
+`./dev/upstream.sh` answers "did this release give us anything, and did it break
+anything?" in one command. Run it after installing a new IngeTrazo, **before**
+suspecting our own code. It reports the installed version (from the app bundle's
+`Info.plist`), the version we last tested against (`TESTED` in the script), the
+source clone's version, and then two lists: the features we are waiting for, and
+the private members we depend on — exiting non-zero if any of the latter moved.
+
+What would help us most, in order of how much it would simplify things:
+
+1. **A public way to register an interactive tool.** Would delete the private
+   reach in `openings/host.py` — the one thing the catalog reviewer flagged, and
+   the only reason that module exists. Watch `views/extension_api.py` for
+   `add_tool`/`register_tool`.
+2. **Exporter / importer registration.** Our own `.ifc` writer could hook into
+   File ▸ Export instead of replacing it. `add_exporter`/`add_importer`.
+3. **A host/opening API in the core** (ROADMAP item 1). Our walls and their
+   openings could stop being an extension's own model, and our quantities could
+   reach the core's BIM panel.
+4. **`IfcOpeningElement` in the core's export.** Our walls' openings would reach
+   a file without our writer.
+5. **IFC2X3 writing in the core.** The schema we still have to do ourselves.
+
+The private members we lean on, and where: `MainWindow._tools`,
+`_tool_actions`, `_tool_group`, `_activate_tool`; `Viewport.pick_face`,
+`pick_face_any`, `_world_under_cursor`; `group.ext`; `scene.plugin_data`;
+`SnapshotImport`. If any of those move, `host.py` is the first file to open — it
+is meant to be the only module that reaches into the application.
+
 ### Next, in the order I would do it
 
 1. **IFC2X3 export.** The layout is already table-driven; the work is the *class
@@ -124,6 +154,7 @@ Ingetrazo/
 │   ├── test.sh          # run every test in dev/schema and dev/tests
 │   ├── lint.py          # "does it register anything?" — AST check, run by check.sh
 │   ├── release.py       # reproducible zips + the catalog entries
+│   ├── upstream.sh      # what a new IngeTrazo gave us, and what it broke
 │   ├── tests/           # extension tests, with stubs for core.* and PySide6
 │   └── schema/          # IFC schema tables: fetch, generate, test (see its README)
 └── reference/           # shallow clones of upstream (gitignored, read-only)
