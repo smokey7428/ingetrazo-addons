@@ -42,7 +42,7 @@ INGETRAZO = "0.5.9"
 #: One version per entry: a fix to one extension must not force a new tag, and a
 #: new hash, on the other — the catalog pins the SHA-256, and re-releasing an
 #: unchanged artefact makes reviewers read code that did not change.
-VERSIONS = {"ifc_editor": "1.0", "openings": "1.1"}
+VERSIONS = {"ifc_editor": "1.1", "openings": "1.1"}
 
 #: One entry per extension: what it is called and what it says it does, in the
 #: three languages the catalog asks for.
@@ -166,9 +166,21 @@ def entry_toml(name: str, version: str, digest: str) -> str:
 
 def main(argv: list[str]) -> int:
     override = argv[argv.index("--version") + 1] if "--version" in argv else None
+
+    # Name the entries you are releasing. Rebuilding one extension must not
+    # rewrite the catalogue entry of another: a version that has not changed
+    # must keep the hash it was published with, or the entry points at a file
+    # nobody released. (It did — which is how this was found.)
+    wanted = [arg for arg in argv if not arg.startswith("-")]
+    unknown = [name for name in wanted if name not in ENTRIES]
+    if unknown:
+        raise SystemExit(f"no extension called {', '.join(unknown)}; "
+                         f"the entries are {', '.join(ENTRIES)}")
+    releasing = [name for name in ENTRIES if not wanted or name in wanted]
+
     CATALOG.mkdir(parents=True, exist_ok=True)
 
-    for name in ENTRIES:
+    for name in releasing:
         version = override or VERSIONS.get(name, "1.0")
         zip_path = build_zip(name, version)
         digest = sha256(zip_path)
@@ -180,7 +192,7 @@ def main(argv: list[str]) -> int:
         print(f"  sha256 {digest}")
         print(f"  entry  {toml.relative_to(ROOT)}")
     print("\nTag each one in the repository before submitting:")
-    for name in ENTRIES:
+    for name in releasing:
         print(f"  {name}-v{override or VERSIONS.get(name, '1.0')}")
     return 0
 
