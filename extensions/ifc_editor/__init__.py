@@ -47,6 +47,12 @@ _TEXTS = {
         "Edit every attribute and property set of the selected IFC object.":
             "Edita todos los atributos y conjuntos de propiedades del objeto "
             "IFC seleccionado.",
+        "Export IFC4 (full)…": "Exportar IFC4 (completo)…",
+        "Export IFC2X3 (full)…": "Exportar IFC2X3 (completo)…",
+        "{schema} (*.ifc);;All files (*)": "{schema} (*.ifc);;Todos los archivos (*)",
+        "Wrote {n} element(s) to {path}": "{n} elemento(s) escritos en {path}",
+        "Not written:": "No escritos:",
+        "IFC export": "Exportación IFC",
     },
 }
 
@@ -56,19 +62,26 @@ def _t(text: str, **kw) -> str:
     return out.format(**kw) if kw else text
 
 
-def export(app) -> None:
-    """Write the document as IFC, with the fields this extension holds."""
+def export(app, schema: str = "IFC4") -> None:
+    """Write the document as IFC, with the fields this extension holds.
+
+    The schema is a choice because it matters to the reader: IFC2X3 keeps a
+    predefined type on a *type object*, IFC4 on the element, and a file has to
+    say one thing or the other.
+    """
     from views.filedialogs import file_dialogs
 
     from . import writer
 
     path, _filter = file_dialogs.getSaveFileName(
-        app.window, _t("Export IFC (full)"), "model.ifc",
-        _t("IFC4 (*.ifc);;All files (*)"))
+        app.window, _t("Export IFC (full)"),
+        f"model-{schema.lower()}.ifc",
+        _t("{schema} (*.ifc);;All files (*)", schema=schema))
     if not path:
         return
+    dropped: list = []
     try:
-        count = writer.save(app.scene, path, schema="IFC4")
+        count = writer.save(app.scene, path, schema=schema, dropped=dropped)
     except ValueError as exc:
         app.viewport.flash_status(str(exc), 6000)
         return
@@ -76,8 +89,25 @@ def export(app) -> None:
         log.exception("ifc_editor: the export failed")
         app.viewport.flash_status(f"IFC: {exc}", 8000)
         return
-    app.viewport.flash_status(
-        _t("Wrote {n} element(s) to {path}", n=count, path=path), 5000)
+    message = _t("Wrote {n} element(s) to {path}", n=count, path=path)
+    if dropped:
+        # A field that could not be written is said out loud: editing it and
+        # being told nothing is how a panel stops being trusted.
+        _say(app, message + "\n\n" + _t("Not written:") + "\n"
+             + "\n".join(f"· {note}" for note in dropped[:15])
+             + (f"\n… {len(dropped) - 15} more" if len(dropped) > 15 else ""))
+        return
+    app.viewport.flash_status(message, 5000)
+
+
+def _say(app, text: str) -> None:
+    from PySide6.QtWidgets import QMessageBox
+
+    message = QMessageBox(app.window)
+    message.setIcon(QMessageBox.INFORMATION)
+    message.setWindowTitle(_t("IFC export"))
+    message.setText(text)
+    message.exec()
 
 
 def setup(app) -> None:
@@ -112,6 +142,12 @@ def setup(app) -> None:
     # The other half: a file that carries what you edited. The core's own
     # Export IFC writes a fixed, narrow set, so this is not a duplicate of it.
     app.add_menu_action(
-        _t("Export IFC (full)…"), lambda: export(app),
+        _t("Export IFC4 (full)…"), lambda: export(app, "IFC4"),
         tip=_t("Write an .ifc with every attribute and property set you "
                "edited, and the openings in our walls."))
+    # IFC2X3 as well: the user's own project files are IFC2X3, and a predefined
+    # type written on the wrong entity is a field that silently does not travel.
+    app.add_menu_action(
+        _t("Export IFC2X3 (full)…"), lambda: export(app, "IFC2X3"),
+        tip=_t("Write the same document in IFC2X3, with a predefined type as an "
+               "IfcWallType where that schema keeps it."))

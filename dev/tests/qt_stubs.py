@@ -655,13 +655,16 @@ def install() -> None:
     dialogs = types.ModuleType("views.filedialogs")
 
     class _FileDialogs:
+        #: Set to a path and the dialog "chooses" it; left alone, it cancels.
+        next_path = None
+
         @staticmethod
         def getSaveFileName(*_a, **_k):
-            return "", ""          # the user cancelled: nothing to write
+            return (_FileDialogs.next_path or "", "")
 
         @staticmethod
         def getOpenFileName(*_a, **_k):
-            return "", ""
+            return (_FileDialogs.next_path or "", "")
 
     dialogs.file_dialogs = _FileDialogs
     shortcuts = types.ModuleType("views.shortcuts")

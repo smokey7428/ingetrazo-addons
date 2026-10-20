@@ -98,16 +98,17 @@ is meant to be the only module that reaches into the application.
 
 ### Next, in the order I would do it
 
-1. **IFC2X3 export.** The layout is already table-driven; the work is the *class
-   vocabulary* (`IfcWallStandardCase` and friends, `PredefinedType` on the type
-   entities). The user's own project files are IFC2X3, so this is what makes the
-   export useful on real work.
+1. ~~IFC2X3 export~~ — **done**, both schemas export and both validate against
+   ifcopenshell. The next real gap is the one below: what the *panels* offer.
 2. **Answer the reviewer on PR #101** if they push back on the private tool
    registration (`host.py` explains it; the PR body discloses it first).
 3. **Wall quantities in the core's BIM panel** — impossible today (it measures
    one group's face set and a wall is a stack of solids). Our Take-off panel does
    it; upstream's common-BIM-API roadmap item is where it belongs.
-4. Smaller: standard-size presets in the panels (the data is in `profiles.py`),
+4. **The wall library's review.** 100 walls ship, 98 are drafts: what is left is
+   a person signing them off (the four questions in `docs/wall-library.md`), not
+   code.
+5. Smaller: standard-size presets in the panels (the data is in `profiles.py`),
    a valraam/draaikiepraam (horizontal hinge), and `IfcOpeningElement` for the
    *freeform* openings too (today only our walls' openings are written).
 
@@ -437,7 +438,7 @@ its symbol behind — hence a "Refresh plan symbols" command.
 Coordinates: **x** along the wall (0 at the left jamb), **y** into the wall
 (0 on the clicked face), **z** up (0 on the floor).
 
-Tests: **2450 checks** in `test_openings_library.py` (the data: every wall's
+Tests: **2451 checks** in `test_openings_library.py` (the data: every wall's
 roles and materials resolve in all five languages, the units change in one
 place, a stored "Buitenblad" recovers its role, nothing drafted is sold as
 reviewed, and an export→edit→import round trip changes nothing it should not),
@@ -662,13 +663,28 @@ It also writes what the core cannot know: a wall's openings become
 `IfcRelFillsElement` — **read from the document**, not by importing the other
 extension (`OPENINGS_KEY` is a name to agree on; the data is in the `.igz`).
 
-IFC4 only so far. IFC2X3 names classes differently (`IfcWallStandardCase`) and
-keeps `PredefinedType` on the type entities — the *layout* is already driven by
-the tables, the *vocabulary* is the next step.
+**Both schemas**, and the *vocabulary* is where they differ — the layout is the
+tables' business either way:
+
+* a layered wall is an `IfcWallStandardCase` in IFC2X3, not an `IfcWall`;
+* IFC2X3 keeps `PredefinedType` on a **type object** (`IfcWallType`,
+  `IfcSlabType`, and `IfcDoorStyle`/`IfcWindowStyle` for the two classes that
+  have no `…Type`), so the value becomes a type object plus an
+  `IfcRelDefinesByType`. One type object per (carrier, values), shared by every
+  wall of that type;
+* a value the schema has **nowhere to put** is reported back and shown after the
+  export — a window's `PredefinedType` has no home in IFC2X3 at all, and editing
+  it and being told nothing is how a panel stops being trusted. So is an illegal
+  enumeration: `SOLIDWALL` is an IFC4 wall type and IFC2X3 has no such literal;
+* IFC2X3 requires an **`IfcOwnerHistory`** on every root entity (IFC4 does not),
+  and one **placement per product** (`PlacesObject` is `SET [1:1]` there, `[0:?]`
+  in IFC4). One owner history and one placement each is correct in both, and is
+  what the writer does now.
 
 **Validated against a real consumer.** `dev/tests/test_ifc_validation.py` writes
 a wall + window + opening and runs it through **ifcopenshell** (0.9.0.post1):
-schema validation reports **no messages**, the edited fields and property sets
+schema validation reports **no messages** — in **both** schemas, which is how
+the missing `Tag` and the `[1:1]` placement were found — the edited fields and property sets
 read back through `ifcopenshell.util.element.get_psets`, both relations resolve,
 every product tessellates through `ifcopenshell.geom`, and the opening measures
 1.0 × 1.5 × 0.3 m in the geometry. ifcopenshell is **dev-only** (not in
@@ -990,6 +1006,15 @@ classification data to a user should name buildingSMART.
   different copies of it**, and therefore different caches: the panel kept
   showing the library it had loaded before the test changed it. One module per
   file, as in the app — `load()` returns `sys.modules[...]` when it is there.
+* **A section keyword inside an attribute's type cuts the entity in half.** The
+  table generator ended an entity's attribute list at the first `INVERSE`/
+  `DERIVE`/`WHERE`/`UNIQUE`, and `UNIQUE` also appears *inside* a type —
+  `LIST [1:?] OF UNIQUE IfcRepresentationMap`. So every type entity lost
+  everything after `RepresentationMaps`, which was its `Tag`: **231 entities
+  across the two schemas**, a table that was quietly one attribute short. Only a
+  real consumer said so (`Index 9 is out of range for variant of size 9` from
+  ifcopenshell). Section keywords are matched at the start of a line now, and
+  `verify()` fails on any attribute type that ends in `OF`.
 * **`bool("false")` is `True`.** A hand-edited `"reviewed": "false"` signed a
   wall off — the one thing the flag exists to prevent. `_wall` now accepts a
   real boolean or refuses the entry with a message, and an import is the

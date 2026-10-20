@@ -301,6 +301,26 @@ def verify(table: dict) -> list[str]:
 
     check(len(entities) > 600,
           f"{table['schema']}: only {len(entities)} entities")
+
+    # A truncated attribute type is how an entity body gets cut in half. The
+    # section keywords are matched only at the start of a line, because ``UNIQUE``
+    # is also a word inside an aggregate type — and while it was matched anywhere,
+    # every entity that declared ``LIST [1:?] OF UNIQUE …`` lost everything after
+    # it, which was the ``Tag`` on 231 type entities in the two schemas.
+    for name, entry in entities.items():
+        for attribute in entry.get("attributes", []):
+            declared = attribute["type"].strip()
+            check(not declared.upper().endswith(" OF"),
+                  f"{table['schema']}: {name}.{attribute['name']} has a "
+                  f"truncated type {declared!r}")
+
+    # A type entity is an IfcTypeProduct, so it carries Tag before its own
+    # attributes. Named here because a type object written without it is a file
+    # a real consumer refuses.
+    kinds = attributes("IfcWallType")
+    check(kinds[-3:] == ["Tag", "ElementType", "PredefinedType"],
+          f"IfcWallType should end Tag/ElementType/PredefinedType, "
+          f"got {kinds[-3:]}")
     check(len(psets) > 250, f"{table['schema']}: only {len(psets)} psets")
 
     if table["schema"] == "IFC4":

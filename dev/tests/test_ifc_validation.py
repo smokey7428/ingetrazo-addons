@@ -71,7 +71,8 @@ def install_package(name: str, folder: Path) -> None:
     sys.modules[name] = package
 
 
-def build(path: Path) -> None:
+def build(path: Path, schema: str = "IFC4", dropped: list | None = None,
+          wall_type: str = "STANDARD") -> None:
     """A wall of ours with a window hosted in it, and fields the core drops."""
     app_stubs.install()
     install_package("ingetrazo_plugin_openings", OPENINGS)
@@ -92,6 +93,11 @@ def build(path: Path) -> None:
     V = app_stubs.QVector3D
     w = walls.normalize({"height": 2.7, "path": [[0, 0], [4, 0]]})
     wall = wall_object.create(scene, w)
+    # A predefined type on the wall: IFC4 keeps it on the wall, IFC2X3 on an
+    # IfcWallType, and both have to work.
+    store.edit(viewport, store.object_key(wall),
+               fields={"Description": "Dragende wand",
+                       "PredefinedType": wall_type})
     window = hosting.add(scene, wall, V(2.0, 0.05, 1.2), V(0, 1, 0),
                          {"kind": "window", "type": "swing"})
     store.edit(viewport, store.object_key(window),
@@ -101,7 +107,24 @@ def build(path: Path) -> None:
                        "PartitioningType": "SINGLE_PANEL"},
                psets={"Pset_WindowCommon": {"IsExternal": True,
                                             "Reference": "R-01"}})
-    writer.save(scene, path, "Validation", "IFC4")
+    writer.save(scene, path, "Validation", schema, dropped=dropped)
+
+
+def schema_messages(model) -> list:
+    """What ifcopenshell's own validator says about the file."""
+    import ifcopenshell.validate
+
+    messages: list = []
+
+    class _Collect(logging.Handler):
+        def emit(self, record):
+            messages.append(record.getMessage())
+
+    logger = logging.getLogger("ifc_validation")
+    logger.handlers[:] = [_Collect()]
+    logger.setLevel(logging.DEBUG)
+    ifcopenshell.validate.validate(model, logger)
+    return messages
 
 
 def main() -> int:
@@ -121,16 +144,7 @@ def main() -> int:
     equal(model.schema, "IFC4", "ifcopenshell reads it as IFC4")
 
     # ---- schema validation against an independent implementation ----
-    messages: list = []
-
-    class _Collect(logging.Handler):
-        def emit(self, record):
-            messages.append(record.getMessage())
-
-    logger = logging.getLogger("ifc_validation")
-    logger.addHandler(_Collect())
-    logger.setLevel(logging.DEBUG)
-    ifcopenshell.validate.validate(model, logger)
+    messages = schema_messages(model)
     check(not messages,
           f"no schema validation messages, got {len(messages)}: "
           f"{messages[:3]}")
@@ -186,6 +200,74 @@ def main() -> int:
     close(max(xs) - min(xs), 1.0, "the opening is 1.0 m along the wall")
     close(max(zs) - min(zs), 1.5, "1.5 m high")
     close(max(ys) - min(ys), 0.3, "and runs through the 300 mm wall")
+
+    equal(str(walls[0].PredefinedType), "STANDARD",
+          "the wall's predefined type, on the wall in IFC4")
+
+    # ---- the same document as IFC2X3 ----
+    # The layout is the tables' business; the *vocabulary* is not. A layered
+    # wall is IfcWallStandardCase, and the predefined type has to travel to an
+    # IfcWallType and back through an IfcRelDefinesByType — or it does not
+    # travel at all.
+    older = HERE / "_validation_2x3.ifc"
+    dropped: list = []
+    build(older, "IFC2X3", dropped)
+    old = ifcopenshell.open(str(older))
+    equal(old.schema, "IFC2X3", "ifcopenshell reads it as IFC2X3")
+    said = schema_messages(old)
+    check(not said, f"no IFC2X3 schema messages, got {len(said)}: {said[:3]}")
+
+    equal(len([wall for wall in old.by_type("IfcWall")
+               if wall.is_a() == "IfcWall"]), 0,
+          "a layered wall is not written as a plain IfcWall")
+    standard = old.by_type("IfcWallStandardCase")
+    equal(len(standard), 1, "but as an IfcWallStandardCase")
+    equal(standard[0].Name, "Wall 01", "with its name")
+    equal(standard[0].Description, "Dragende wand",
+          "and the description the core would have dropped")
+
+    kinds = old.by_type("IfcWallType")
+    equal(len(kinds), 1, "the predefined type became one IfcWallType")
+    equal(str(kinds[0].PredefinedType), "STANDARD", "carrying the value")
+    links = old.by_type("IfcRelDefinesByType")
+    equal(len(links), 1, "linked back to the wall")
+    equal(links[0].RelatingType.id(), kinds[0].id(),
+          "through the type relation")
+    equal([o.id() for o in links[0].RelatedObjects], [standard[0].id()],
+          "and to that wall")
+
+    # IFC2X3 has nowhere to put a window's PredefinedType — IfcWindowStyle has
+    # no such attribute — so the export must say so rather than lose it.
+    equal(len(old.by_type("IfcWindow")), 1, "the window is there")
+    check(any("PredefinedType" in note and "window" in note.lower()
+              for note in dropped),
+          f"and its dropped predefined type is reported: {dropped}")
+
+    # The hole is still a hole, and still the size we asked for.
+    equal(len(old.by_type("IfcRelVoidsElement")), 1,
+          "the wall is voided in IFC2X3 too")
+    equal(len(old.by_type("IfcRelFillsElement")), 1, "and the window fills it")
+    settings = ifcopenshell.geom.settings()
+    shape = ifcopenshell.geom.create_shape(
+        settings, old.by_type("IfcOpeningElement")[0])
+    verts = shape.geometry.verts
+    xs, zs = verts[0::3], verts[2::3]
+    close(max(xs) - min(xs), 1.0, "the opening is still 1.0 m along the wall")
+    close(max(zs) - min(zs), 1.5, "and still 1.5 m high")
+    # A value this schema's enumeration does not have is refused *and* said out
+    # loud. SOLIDWALL is an IFC4 wall type; IFC2X3 has no such literal, and a
+    # field that vanishes quietly is the thing this writer exists to prevent.
+    strict = HERE / "_validation_strict.ifc"
+    said_again: list = []
+    build(strict, "IFC2X3", said_again, wall_type="SOLIDWALL")
+    checked = ifcopenshell.open(str(strict))
+    equal(len(checked.by_type("IfcWallType")), 0,
+          "SOLIDWALL is not an IFC2X3 wall type, so no type object is written")
+    check(any("SOLIDWALL" in note for note in said_again),
+          f"and the export reports it: {said_again}")
+    strict.unlink()
+
+    older.unlink()
 
     path.unlink()
     if failures:

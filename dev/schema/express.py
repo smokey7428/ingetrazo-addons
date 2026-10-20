@@ -24,7 +24,11 @@ from dataclasses import dataclass, field
 
 _COMMENT = re.compile(r"\(\*.*?\*\)", re.DOTALL)
 
-#: Keywords that end the explicit-attribute section of an entity.
+#: Keywords that end the explicit-attribute section of an entity. They have to
+#: **start a line** to count as one: ``UNIQUE`` is also a modifier inside an
+#: attribute's type (``LIST [1:?] OF UNIQUE IfcRepresentationMap``), and a bare
+#: word-boundary match cut the rest of the entity off — which is how every type
+#: entity lost the ``Tag`` that follows it.
 _SECTION_KEYWORDS = ("INVERSE", "DERIVE", "WHERE", "UNIQUE")
 
 #: The section keywords that may follow ``SUBTYPE OF (…)``/``SUPERTYPE OF (…)``.
@@ -145,8 +149,8 @@ class Schema:
         # The explicit attributes run from after the SUBTYPE line to the first
         # section keyword. Splitting on ';' is safe: an attribute's type never
         # contains one (aggregate bounds use brackets).
-        tail = re.split(r"\b(" + "|".join(_ATTR_SECTIONS) + r")\b", body,
-                        maxsplit=1)[0]
+        tail = re.split(r"(?m)^[ \t]*(" + "|".join(_ATTR_SECTIONS) + r")\b",
+                        body, maxsplit=1)[0]
         for chunk in _split_top_level(tail):
             chunk = " ".join(chunk.split())
             if not chunk or chunk.upper().startswith(("SUPERTYPE", "SUBTYPE")):

@@ -146,6 +146,10 @@ class Viewport:
         self.scene = scene
         self.history = History(scene)
         self.updates = 0
+        self.status: list = []
+
+    def flash_status(self, text: str, _ms: int = 0) -> None:
+        self.status.append(text)
 
     def update(self) -> None:
         self.updates += 1
@@ -174,6 +178,7 @@ class FakeApp:
     def __init__(self, scene, viewport):
         self.scene, self.viewport = scene, viewport
         self.key = "ifc_editor"
+        self.window = None          # the parent a dialog would hang off
         self.panels: dict = {}
         self.menu_actions: list = []
         self.shown = None
@@ -274,8 +279,9 @@ def main() -> int:
     module.setup(app)
     store = sys.modules["ingetrazo_plugin_ifc_editor.store"]
     equal(list(app.panels), ["IFC"], "setup adds one panel, titled IFC")
-    equal(len(app.menu_actions), 2,
-          "and two Extensions-menu entries: the panel, and the full IFC export")
+    equal(len(app.menu_actions), 3,
+          "and three Extensions-menu entries: the panel, and a full export in "
+          "each schema — IFC2X3 is what the user's own project files are")
     text, _fn, shortcut, tip = app.menu_actions[0]
     # The app's own shortcuts are NOT checked by add_menu_action, so a clash
     # here makes both the app's action and ours ambiguous. Refresh this list
@@ -446,6 +452,34 @@ def main() -> int:
             print(f"!! {failure}")
         print(f"{len(failures)} of {checks} checks failed.")
         return 1
+    # ---- the export, through the menu, with a real file ----
+    import tempfile
+    from pathlib import Path as _Path
+
+    from views.filedialogs import file_dialogs
+
+    room = _Path(tempfile.mkdtemp(prefix="ingetrazo-ifc-"))
+    target = room / "model-2x3.ifc"
+    file_dialogs.next_path = str(target)
+    try:
+        entry = next((action for action in app.menu_actions
+                      if action[0].startswith("Export IFC2X3")), None)
+        check(entry is not None, "the menu offers an IFC2X3 export")
+        entry[1]()
+        check(target.is_file(), f"and it writes the file the dialog chose: "
+                                f"{app.viewport.status[-1:] or 'no message'}")
+        text = target.read_text(encoding="ascii") if target.is_file() else ""
+        check(text.startswith("ISO-10303-21;"), "which is a STEP file")
+        check("FILE_SCHEMA(('IFC2X3'));" in text, "declaring IFC2X3")
+        check("IFCWALLSTANDARDCASE" in text,
+              "with the wall as a standard case, as IFC2X3 wants it")
+        check("IFCWALLTYPE" in text,
+              "and the predefined type carried as a type object")
+    finally:
+        file_dialogs.next_path = None
+        import shutil
+        shutil.rmtree(room, ignore_errors=True)
+
     print(f"ifc_editor panel: ok ({checks} checks)")
     return 0
 

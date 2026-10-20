@@ -21,9 +21,18 @@ ours. Each becomes an ``IfcOpeningElement`` with its own geometry,
 ``IfcRelFillsElement``. That is how IFC expects a hole to be described, and it
 is the reason a wall can stay a wall.
 
-IFC4 only for now: IFC2X3 names several classes differently (``IfcWallStandardCase``
-and friends) and keeps ``PredefinedType`` on the *type* entities, and the
-tables are ready for it — the entity vocabulary is the next step, not the layout.
+IFC4 and IFC2X3. The layout is the same in both — the tables know each schema's
+attributes — but the **vocabulary** differs, and that is what this module has to
+get right:
+
+* a wall with layers is an ``IfcWallStandardCase`` in IFC2X3, not an ``IfcWall``;
+* IFC2X3 keeps ``PredefinedType`` on a **type object** (``IfcWallType``,
+  ``IfcSlabType``) and, for the two classes that have no Type, on
+  ``IfcDoorStyle`` / ``IfcWindowStyle``. So the value the user typed becomes a
+  type object and an ``IfcRelDefinesByType``, rather than disappearing.
+
+Nothing is dropped in silence: a value that this schema has nowhere to put is
+reported back to the caller, and the export says so.
 """
 from __future__ import annotations
 
@@ -47,6 +56,117 @@ _NUMBERS = ("integer", "real", "number")
 #: openings and a hosted window's host id are data in the .igz, so this is a
 #: name to agree on, not an import.
 OPENINGS_KEY = "openings"
+
+#: Where IFC2X3 keeps a value that IFC4 keeps on the element itself. A door and
+#: a window have no ``…Type`` in IFC2X3 — their type is a *style* — and a
+#: standard case is a wall's type, not an ``IfcWallStandardCaseType``.
+_TYPE_NAMES = {
+    "IfcWallStandardCase": "IfcWallType",
+    "IfcSlabStandardCase": "IfcSlabType",
+    "IfcPlateStandardCase": "IfcPlateType",
+    "IfcDoor": "IfcDoorStyle",
+    "IfcWindow": "IfcWindowStyle",
+}
+
+#: The values that belong on a type object rather than on the element.
+_TYPE_VALUES = ("PredefinedType", "OperationType", "ElementType")
+
+
+def element_class(table, ifc_class: str, schema: str) -> str:
+    """The class this schema wants for the object.
+
+    A wall of ours has layers, and IFC2X3's ``IfcWall`` cannot carry a layer
+    set: the layered wall is ``IfcWallStandardCase``. Everything else is named
+    the same in both schemas.
+    """
+    if schema == "IFC2X3" and ifc_class in ("IfcWall", "IfcWallStandardCase") \
+            and table.has_entity("IfcWallStandardCase"):
+        return "IfcWallStandardCase"
+    return ifc_class
+
+
+def type_carrier(table, ifc_class: str) -> str | None:
+    """The type object this schema keeps an element's ``PredefinedType`` on.
+
+    IFC4 puts it on the element and needs nothing. IFC2X3 keeps it on
+    ``IfcWallType``, ``IfcSlabType``, … and — for the two classes that have no
+    ``…Type`` — on ``IfcDoorStyle`` and ``IfcWindowStyle``.
+    """
+    if table.predefined_attribute(ifc_class):
+        return None
+    candidates = []
+    if ifc_class in _TYPE_NAMES:
+        candidates.append(_TYPE_NAMES[ifc_class])
+    candidates.append(f"{ifc_class}Type")
+    if ifc_class.endswith("StandardCase"):
+        candidates.append(ifc_class[:-len("StandardCase")] + "Type")
+    for candidate in candidates:
+        if table.has_entity(candidate):
+            return candidate
+    return None
+
+
+def write_type(step: "_Step", table, ifc_class: str, values: dict,
+               element: int, state: dict) -> set:
+    """Carry the values this schema keeps on a type, and link it to the element.
+
+    Returns the names carried, so the caller knows what it need not report.
+    One type object per (carrier, values): ten walls of the same predefined type
+    share one ``IfcWallType``, as they should.
+    """
+    carrier = type_carrier(table, ifc_class)
+    if carrier is None:
+        return set(), {}
+    attributes = {attribute["name"]: attribute
+                  for attribute in table.attributes(carrier)}
+    carried, refused = {}, {}
+    for name in _TYPE_VALUES:
+        if name not in attributes:
+            continue
+        value = values.get(name)
+        if value is None or str(value).strip() == "":
+            continue
+        if not legal_enum(attributes[name], value):
+            refused[name] = value
+            continue
+        carried[name] = value
+    if not carried:
+        return set(), refused
+    key = (carrier, tuple(sorted((name, str(value))
+                                 for name, value in carried.items())))
+    made = state["types"].get(key)
+    if made is None:
+        type_values = dict(carried, GlobalId=guid(), Name=ifc_class)
+        made = step.add(carrier,
+                        *_attributes(table, carrier, type_values, 0, 0, state,
+                                     ifc_class))
+        state["types"][key] = made
+    step.add("IFCRELDEFINESBYTYPE", _s(guid()), f"#{state['owner']}", "$", "$",
+             f"(#{element})", f"#{made}")
+    return set(carried), refused
+
+
+def report_dropped(table, ifc_class: str, values: dict, carried: set,
+                   refused: dict, label: str, state: dict) -> None:
+    """What this schema has nowhere to put, said out loud.
+
+    The whole point of this writer is that an edited field reaches the file. When
+    a schema cannot hold one, the person who typed it is told — a field that
+    vanishes quietly is worse than one that is refused.
+    """
+    for name, value in (refused or {}).items():
+        state["dropped"].append(
+            f"{label}: {name} — {value!r} is not a value this schema has for "
+            f"{ifc_class}")
+    names = {attribute["name"] for attribute in table.attributes(ifc_class)}
+    for name, value in values.items():
+        if name in names or name in carried:
+            continue
+        if value is None or str(value).strip() == "":
+            continue
+        state["dropped"].append(
+            f"{label}: {name} — {ifc_class} has no such attribute in "
+            f"{state['schema']}")
 
 
 def guid() -> str:
@@ -270,8 +390,11 @@ def opening_faces(w: dict, opening: dict) -> list:
 
 # ---- the file ---------------------------------------------------------------
 def save(scene, path, project_name: str = "IngeTrazo project",
-         schema: str = "IFC4") -> int:
+         schema: str = "IFC4", dropped: list | None = None) -> int:
     """Write every tagged object to ``path``. Returns how many elements.
+
+    ``dropped``, if given, collects what this schema has nowhere to put — a
+    value that would otherwise vanish between the panel and the file.
 
     Raises ``ValueError`` when nothing is tagged — an IFC file with no elements
     is not a document, it is a mistake.
@@ -283,7 +406,13 @@ def save(scene, path, project_name: str = "IngeTrazo project",
     if not objects:
         raise ValueError("No tagged BIM objects to export")
 
+    state = {"schema": schema, "types": {}, "dropped": [], "owner": 0}
+
     step = _Step()
+    # IFC2X3 requires an OwnerHistory on every root entity and IFC4 does not;
+    # writing one always is cheaper than two code paths, and more honest than a
+    # file that does not say who made it.
+    state["owner"] = _owner_history(step, table, state)
     origin = step.add("IFCCARTESIANPOINT", "(0.,0.,0.)")
     axis = step.add("IFCAXIS2PLACEMENT3D", f"#{origin}", "$", "$")
     context = step.add("IFCGEOMETRICREPRESENTATIONCONTEXT",
@@ -293,28 +422,37 @@ def save(scene, path, project_name: str = "IngeTrazo project",
              step.add("IFCSIUNIT", "*", ".VOLUMEUNIT.", "$", ".CUBIC_METRE.")]
     unit_assign = step.add("IFCUNITASSIGNMENT",
                            "(" + ",".join(f"#{u}" for u in units) + ")")
-    project = step.add("IFCPROJECT", _s(guid()), "$", _s(project_name),
-                       "$", "$", "$", "$", f"(#{context})", f"#{unit_assign}")
-    placement = step.add("IFCLOCALPLACEMENT", "$", f"#{axis}")
-    site = step.add("IFCSITE", _s(guid()), "$", "'Site'", "$", "$",
-                    f"#{placement}", "$", "$", ".ELEMENT.", "$", "$", "$",
+    project = step.add("IFCPROJECT", _s(guid()), f"#{state['owner']}",
+                       _s(project_name), "$", "$", "$", "$",
+                       f"(#{context})", f"#{unit_assign}")
+    def place() -> int:
+        """A placement for **one** product.
+
+        IFC4 lets products share a placement; IFC2X3's ``PlacesObject`` is
+        ``SET [1:1]`` and a shared one is an invalid file there. One each is
+        correct in both.
+        """
+        return step.add("IFCLOCALPLACEMENT", "$", f"#{axis}")
+    site = step.add("IFCSITE", _s(guid()), f"#{state['owner']}", "'Site'",
+                    "$", "$",
+                    f"#{place()}", "$", "$", ".ELEMENT.", "$", "$", "$",
                     "$", "$")
-    building = step.add("IFCBUILDING", _s(guid()), "$", "'Building'", "$",
-                        "$", f"#{placement}", "$", "$", ".ELEMENT.",
+    building = step.add("IFCBUILDING", _s(guid()), f"#{state['owner']}",
+                        "'Building'", "$", "$", f"#{place()}", "$", "$", ".ELEMENT.",
                         "$", "$", "$")
-    storey = step.add("IFCBUILDINGSTOREY", _s(guid()), "$", "'Storey'", "$",
-                      "$", f"#{placement}", "$", "$", ".ELEMENT.", "0.")
+    storey = step.add("IFCBUILDINGSTOREY", _s(guid()), f"#{state['owner']}",
+                      "'Storey'", "$", "$", f"#{place()}", "$", "$", ".ELEMENT.", "0.")
     for parent, child in ((project, site), (site, building),
                           (building, storey)):
-        step.add("IFCRELAGGREGATES", _s(guid()), "$", "$", "$",
+        step.add("IFCRELAGGREGATES", _s(guid()), f"#{state['owner']}", "$", "$",
                  f"#{parent}", f"(#{child})")
 
     elements: list = []           # every element id, for the spatial relation
     pairs: list = []              # (group, element id), for the fill relations
     openings: dict = {}           # our opening id → the opening element
     for obj in objects:
-        element, made = _element(step, table, scene, obj, context, placement,
-                                 class_quantities)
+        element, made = _element(step, table, scene, obj, context, place,
+                                 class_quantities, state)
         if element is None:
             continue
         elements.append(element)
@@ -324,9 +462,10 @@ def save(scene, path, project_name: str = "IngeTrazo project",
 
     if not elements:
         raise ValueError("No tagged BIM objects to export")
-    step.add("IFCRELCONTAINEDINSPATIALSTRUCTURE", _s(guid()), "$", "$", "$",
+    step.add("IFCRELCONTAINEDINSPATIALSTRUCTURE", _s(guid()),
+             f"#{state['owner']}", "$", "$",
              "(" + ",".join(f"#{e}" for e in elements) + ")", f"#{storey}")
-    _fill_relations(step, pairs, openings)
+    _fill_relations(step, pairs, openings, state["owner"])
 
     stamp = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     header = (
@@ -343,10 +482,38 @@ def save(scene, path, project_name: str = "IngeTrazo project",
     footer = "ENDSEC;\nEND-ISO-10303-21;\n"
     Path(path).write_text(header + "\n".join(step.lines) + "\n" + footer,
                           encoding="ascii")
+    if dropped is not None:
+        dropped.extend(state["dropped"])
     return len(elements)
 
 
-def _element(step: _Step, table, scene, obj, context, placement, quantities):
+def _owner_history(step: "_Step", table, state: dict) -> int:
+    """The file's one ``IfcOwnerHistory``.
+
+    IFC4 makes it optional and IFC2X3 does not: a root entity without it is an
+    invalid file there, which a real consumer refuses outright. Who "owns" a file
+    written by an add-on is the add-on, so the name is the published handle and
+    no person's.
+
+    The person and the organization are written **from the tables** like
+    everything else: IFC2X3's ``IfcPerson`` carries an ``Addresses`` that IFC4's
+    does not, and a hand-counted attribute list gets that wrong.
+    """
+    label = "ingetrazo-addons"
+    person = step.add("IFCPERSON", *_attributes(
+        table, "IfcPerson", {"FamilyName": label}, 0, 0, state, label))
+    organization = step.add("IFCORGANIZATION", *_attributes(
+        table, "IfcOrganization", {"Name": label}, 0, 0, state, label))
+    pair = step.add("IFCPERSONANDORGANIZATION", f"#{person}",
+                    f"#{organization}", "$")
+    application = step.add("IFCAPPLICATION", f"#{organization}", _s("1.0"),
+                           _s("IngeTrazo"), _s("ingetrazo"))
+    return step.add("IFCOWNERHISTORY", f"#{pair}", f"#{application}", "$",
+                    ".ADDED.", "$", "$", "$", "0")
+
+
+def _element(step: _Step, table, scene, obj, context, place, quantities,
+             state: dict):
     """One tagged object, its property sets, and any openings it hosts."""
     faces = obj.get("faces")
     group = obj.get("group")
@@ -364,8 +531,17 @@ def _element(step: _Step, table, scene, obj, context, placement, quantities):
     if data is None:
         return None, {}
 
-    ifc_class = data["class"] if table.has_entity(data["class"]) \
-        else "IfcBuildingElementProxy"
+    tagged = data["class"]
+    if table.has_entity(tagged):
+        ifc_class = element_class(table, tagged, state["schema"])
+    else:
+        # A class this schema does not have. It still exports — as a proxy,
+        # which is what IFC has for exactly this — but not in silence.
+        ifc_class = "IfcBuildingElementProxy"
+        state["dropped"].append(
+            f"{data.get('name') or tagged}: {tagged} is not an "
+            f"{state['schema']} entity, so it was written as "
+            f"IfcBuildingElementProxy")
     # The core tag's name is the source of truth for Name — it is what the BIM
     # panel, the take-off and the core's own export read.
     values = dict(data["fields"])
@@ -377,14 +553,18 @@ def _element(step: _Step, table, scene, obj, context, placement, quantities):
                           context)
     shape = step.add("IFCPRODUCTDEFINITIONSHAPE", "$", "$",
                      f"(#{representation})")
+    label = values.get("Name") or ifc_class
+    placement = place()
     element = step.add(ifc_class, *_attributes(table, ifc_class, values,
-                                               placement, shape))
-    _psets(step, table, element, data, entries, qset_name)
+                                               placement, shape, state, label))
+    carried, refused = write_type(step, table, ifc_class, values, element, state)
+    report_dropped(table, ifc_class, values, carried, refused, label, state)
+    _psets(step, table, element, data, entries, qset_name, state)
 
     made: dict = {}
     wall = _wall_data(group) if group is not None else None
     if wall is not None:
-        made = _voids(step, table, element, wall, context, placement)
+        made = _voids(step, table, element, wall, context, place, state)
     return element, made
 
 
@@ -402,8 +582,23 @@ def _decorate(values: dict, ifc_class: str, entries) -> None:
     values.setdefault("OverallWidth", dims.get("Width"))
 
 
+def legal_enum(attribute: dict, value) -> bool:
+    """Whether ``value`` is one of the literals this attribute's enumeration has.
+
+    ``SINGLEPANEL`` is a window's PartitioningType, not its PredefinedType; a
+    value from another enum is written as nothing rather than as a lie — but it
+    is also *said out loud*, because a field the user typed that never arrives is
+    the thing this writer exists to prevent.
+    """
+    allowed = attribute.get("enum") or []
+    if not allowed:
+        return True
+    return str(value).strip().upper() in [option.upper() for option in allowed]
+
+
 def _attributes(table, ifc_class: str, values: dict, placement: int,
-                shape: int) -> list:
+                shape: int, state: dict | None = None,
+                label: str = "") -> list:
     """The class's attributes, in the schema's own order — nothing hardcoded.
 
     ``ObjectPlacement`` and ``Representation`` are the geometry's, ``OwnerHistory``
@@ -416,7 +611,8 @@ def _attributes(table, ifc_class: str, values: dict, placement: int,
         if name == "GlobalId":
             out.append(_s(values.get("GlobalId") or guid()))
         elif name == "OwnerHistory":
-            out.append("$")
+            out.append(f"#{state['owner']}" if state and state.get("owner")
+                       else "$")
         elif name == "ObjectPlacement":
             out.append(f"#{placement}")
         elif name == "Representation":
@@ -424,21 +620,20 @@ def _attributes(table, ifc_class: str, values: dict, placement: int,
         else:
             kind = table.resolve_kind(attribute["type"])
             value = values.get(name)
-            if kind == "enum" and value is not None:
-                # Only a legal literal of *that* enumeration may be written. A
-                # value from another enum — SINGLEPANEL is a window's
-                # PartitioningType, not its PredefinedType — would be written as
-                # an illegal STEP enumeration and read back as nothing at all.
-                allowed = attribute.get("enum") or []
-                if allowed and str(value).strip().upper() not in \
-                        [option.upper() for option in allowed]:
-                    value = None
+            if kind == "enum" and value is not None and \
+                    not legal_enum(attribute, value):
+                if state is not None:
+                    state["dropped"].append(
+                        f"{label or values.get('Name') or ifc_class}: {name} — "
+                        f"{value!r} is not a value of {ifc_class}.{name} in "
+                        f"{state['schema']}")
+                value = None
             out.append(literal(kind, value))
     return out
 
 
 def _psets(step: _Step, table, element: int, data: dict, entries,
-           qset_name: str) -> None:
+           qset_name: str, state: dict) -> None:
     """The user's property sets, and the class's standard quantities."""
     for name, values in (data.get("psets") or {}).items():
         declared = {p["name"]: p for p in
@@ -456,21 +651,22 @@ def _psets(step: _Step, table, element: int, data: dict, entries,
                 f"{_nominal(value_type)}({literal(kind, value)})", "$"))
         if not props:
             continue
-        pset = step.add("IFCPROPERTYSET", _s(guid()), "$", _s(name), "$",
+        pset = step.add("IFCPROPERTYSET", _s(guid()), f"#{state['owner']}",
+                        _s(name), "$",
                         "(" + ",".join(f"#{p}" for p in props) + ")")
-        step.add("IFCRELDEFINESBYPROPERTIES", _s(guid()), "$", "$", "$",
-                 f"(#{element})", f"#{pset}")
+        step.add("IFCRELDEFINESBYPROPERTIES", _s(guid()), f"#{state['owner']}",
+                 "$", "$", f"(#{element})", f"#{pset}")
 
     _Q = {"area": "IFCQUANTITYAREA", "volume": "IFCQUANTITYVOLUME",
           "length": "IFCQUANTITYLENGTH", "weight": "IFCQUANTITYWEIGHT"}
     quantities = [step.add(_Q[kind], _s(name), "$", "$", _f(value), "$")
                   for kind, name, value in entries if kind in _Q]
     if quantities:
-        qset = step.add("IFCELEMENTQUANTITY", _s(guid()), "$",
+        qset = step.add("IFCELEMENTQUANTITY", _s(guid()), f"#{state['owner']}",
                         _s(qset_name), "$", "$",
                         "(" + ",".join(f"#{q}" for q in quantities) + ")")
-        step.add("IFCRELDEFINESBYPROPERTIES", _s(guid()), "$", "$", "$",
-                 f"(#{element})", f"#{qset}")
+        step.add("IFCRELDEFINESBYPROPERTIES", _s(guid()), f"#{state['owner']}",
+                 "$", "$", f"(#{element})", f"#{qset}")
 
 
 def _nominal(value_type: str) -> str:
@@ -482,7 +678,7 @@ def _nominal(value_type: str) -> str:
 
 
 def _voids(step: _Step, table, wall_element: int, wall: dict, context: int,
-           placement: int) -> dict:
+           place, state: dict) -> dict:
     """A wall's openings: an IfcOpeningElement each, voiding the wall.
 
     This is how IFC describes a hole — the wall is not a mesh with a gap, it is
@@ -497,15 +693,18 @@ def _voids(step: _Step, table, wall_element: int, wall: dict, context: int,
         representation = brep(step, faces, context)
         shape = step.add("IFCPRODUCTDEFINITIONSHAPE", "$", "$",
                          f"(#{representation})")
-        element = step.add("IFCOPENINGELEMENT", _s(guid()), "$", "$", "$", "$",
-                           f"#{placement}", f"#{shape}", "$", ".OPENING.")
-        step.add("IFCRELVOIDSELEMENT", _s(guid()), "$", "$", "$",
-                 f"#{wall_element}", f"#{element}")
+        element = step.add("IFCOPENINGELEMENT",
+                           *_attributes(table, "IfcOpeningElement",
+                                        {"PredefinedType": "OPENING"},
+                                        place(), shape, state))
+        step.add("IFCRELVOIDSELEMENT", _s(guid()), f"#{state['owner']}", "$",
+                 "$", f"#{wall_element}", f"#{element}")
         made[opening.get("id")] = element
     return made
 
 
-def _fill_relations(step: _Step, pairs, openings: dict) -> None:
+def _fill_relations(step: _Step, pairs, openings: dict,
+                    owner: int = 0) -> None:
     """Where a door or window stands in an opening: ``IfcRelFillsElement``."""
     for group, element in pairs:
         ext = getattr(group, "ext", None) or {}
@@ -514,5 +713,5 @@ def _fill_relations(step: _Step, pairs, openings: dict) -> None:
         opening = openings.get(host.get("opening"))
         if opening is None:
             continue
-        step.add("IFCRELFILLSELEMENT", _s(guid()), "$", "$", "$",
+        step.add("IFCRELFILLSELEMENT", _s(guid()), f"#{owner}", "$", "$",
                  f"#{opening}", f"#{element}")

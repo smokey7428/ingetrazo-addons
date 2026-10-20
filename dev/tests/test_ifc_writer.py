@@ -105,6 +105,10 @@ def main() -> int:
     wall = wall_object.create(scene, w)
     window = hosting.add(scene, wall, V(2.0, 0.05, 1.2), V(0, 1, 0),
                          {"kind": "window", "type": "swing"})
+    # A predefined type on the wall: the one value that moves between entities
+    # when the schema changes.
+    store.edit(viewport, store.object_key(wall),
+               fields={"PredefinedType": "STANDARD"})
 
     # Give the window the fields the core's writer would drop.
     store.edit(viewport, store.object_key(window),
@@ -174,6 +178,36 @@ def main() -> int:
     equal(len(fills), 1, "one IfcRelFillsElement")
     equal(fills[0].args[4].id, _id_of(instances, "IFCOPENINGELEMENT"),
           "and the window fills the opening")
+
+    # ---- the same document in IFC2X3, read by our own reader ----
+    # The vocabulary is not the tables' business: a layered wall is a standard
+    # case there, and the predefined type travels on a type object. Checked here
+    # so the IFC2X3 path is covered on a machine without ifcopenshell too.
+    older = ROOT / "dev" / "tests" / "_writer_test_2x3.ifc"
+    dropped: list = []
+    count = writer.save(scene, older, "Writer test", "IFC2X3", dropped=dropped)
+    old_text = older.read_text(encoding="utf-8")
+    old = spf.parse(old_text)
+    equal(spf.header_schema(old_text), "IFC2X3", "the header names IFC2X3")
+    equal(count, 2, "the same two objects")
+    old_kinds = {i.type_name for i in old.values()}
+    check("IFCWALLSTANDARDCASE" in old_kinds,
+          "the layered wall is a standard case in IFC2X3")
+    check("IFCWALL" not in old_kinds, "and not a plain IfcWall")
+    check("IFCWALLTYPE" in old_kinds,
+          "the predefined type is carried on a type object")
+    check("IFCRELDEFINESBYTYPE" in old_kinds, "which is linked to the wall")
+    kind = next(i for i in old.values() if i.type_name == "IFCWALLTYPE")
+    equal(len(kind.args), 10,
+          f"IfcWallType carries its ten attributes: {kind.args}")
+    # IFC2X3's IfcWindow has no PredefinedType, and IfcWindowStyle has none
+    # either, so the value has nowhere to go — and the writer says so.
+    check(any("PredefinedType" in note for note in dropped),
+          f"a value the schema cannot hold is reported: {dropped}")
+    check(all(ref.id in old for eid, instance in old.items()
+              for arg in instance.args for ref in _refs(arg)),
+          "and every reference in the IFC2X3 file resolves")
+    older.unlink()
 
     path.unlink()
     if failures:
