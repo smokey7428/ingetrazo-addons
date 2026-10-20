@@ -324,7 +324,30 @@ def main() -> int:
           "setup adds the Openings, Walls and Take-off panels")
     panel = app.panels["Openings"].widget
     check(panel._dock is not None, "the panel knows its own tab")
-    check(bool(app.menus), "and the extension has its own submenu")
+    # Two chapters, not one: the openings are one half of this extension and
+    # the walls the other, and a wall type file under "Doors & windows" made the
+    # walls look like an accessory to a door.
+    menus = [menu for menu in app.menus if not isinstance(menu, tuple)]
+    equal([menu.title for menu in menus], ["Doors & windows", "Walls"],
+          "the extension has a menu for each half")
+    doors_menu, walls_menu = menus
+    doors_entries = [action[0] for action in doors_menu.actions]
+    wall_entries = [action[0] for action in walls_menu.actions]
+    for wanted in ("Draw a wall…", "Walls panel…", "Take-off…",
+                   "Export wall types…", "Import wall types…",
+                   "Wall types folder…"):
+        check(wanted in wall_entries,
+              f"the Walls menu offers {wanted!r}: {wall_entries}")
+    for unwanted in ("Place a door or window…", "Edit…", "Erase",
+                     "Redraw the swing symbols"):
+        check(unwanted not in wall_entries,
+              f"and no door command: {unwanted!r} is in the walls menu")
+    for unwanted in ("Draw a wall…", "Walls panel…", "Export wall types…",
+                     "Import wall types…"):
+        check(unwanted not in doors_entries,
+              f"the Doors menu has no wall command: {unwanted!r}")
+    check("Place a door or window…" in doors_entries,
+          "but it does have the door")
     equal(len(app.context_menus), 1, "and a right-click entry")
     equal(len(app.outliner_kinds), 1, "and a Type column for the Browser")
 

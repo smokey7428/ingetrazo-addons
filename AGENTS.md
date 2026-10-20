@@ -590,8 +590,8 @@ new file and nothing else —
 * **A wall keeps its own copy of the stack**, so editing a library entry never
   changes a wall in an issued drawing. The type key is provenance only.
 
-**Editing a wall type by hand** (Extensions ▸ Doors & windows ▸ Wall types
-folder… opens the hidden folder the import writes to). `data/walls/walls.schema.json`
+**Editing a wall type by hand** (Extensions ▸ **Walls** ▸ Wall types folder…
+opens the hidden folder the import writes to). `data/walls/walls.schema.json`
 is a **JSON Schema** for the library format, and an export writes it beside the
 file and points at it with `$schema`, so a folder can be handed to somebody else
 and still validate. In VS Code and most editors that means a misspelled role is
@@ -726,8 +726,10 @@ ifcopenshell is not installed on this machine.
 
 ### Installed
 
-`./dev/install.sh` links it; **Extensions ▸ Doors & windows**, and the **Doors**
-tab. The interactive tool registers through `host.py`, the one private-API
+`./dev/install.sh` links it; **Extensions ▸ Doors & windows** for the openings
+and **Extensions ▸ Walls** for the walls, each with its own tray tab. The two
+menus are deliberate: the walls outgrew the menu they started in, and a wall type
+file listed under "Doors & windows" read as an accessory to a door. The interactive tool registers through `host.py`, the one private-API
 dependency — that module refuses gracefully on a build that has moved those
 members, so a future IngeTrazo shows a sentence instead of a traceback.
 

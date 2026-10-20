@@ -158,33 +158,39 @@ def setup(app) -> None:
         log.warning("openings: the door tool is unavailable in this build; "
                     "the panel still works")
 
-    # Our own submenu: several commands, and the panel's buttons are repeats
-    # of the two that matter most.
+    # Two chapters, not one. The openings were the first half of this extension
+    # and the walls the second; a single "Doors & windows" menu with the wall
+    # type files in it made the walls look like an accessory to a door.
     sub = app.add_menu(_t("Doors & windows"))
     if sub is not None:
         sub.addAction(_t("Place a door or window…"),
                       lambda: host.activate(app, TOOL_KEY))
-        sub.addAction(_t("Draw a wall…"),
-                      lambda: host.activate(app, WALL_TOOL_KEY))
-        sub.addAction(_t("Walls panel…"),
-                      lambda: app.show_panel(walls_dock))
-        sub.addAction(_t("Take-off…"),
-                      lambda: app.show_panel(takeoff_dock))
         sub.addAction(_t("Edit…"), lambda: app.show_panel(dock))
         sub.addAction(_t("Erase"), panel._on_erase)
-        sub.addSeparator()
-        sub.addAction(_t("Export wall types…"),
-                      lambda: _export_walls(app, walls_panel))
-        sub.addAction(_t("Import wall types…"),
-                      lambda: _import_walls(app, walls_panel))
-        sub.addAction(_t("Wall types folder…"),
-                      lambda: _wall_types_folder(app))
         sub.addSeparator()
         sub.addAction(_t("Make plan / elevation / 3D"),
                       lambda: scenes.make(app.viewport,
                                           params_mod.SYMBOL_LAYER))
         sub.addAction(_t("Redraw the swing symbols"),
                       lambda: _scenes_refresh(app))
+
+    walls_menu = app.add_menu(_t("Walls"))
+    if walls_menu is not None:
+        walls_menu.addAction(_t("Draw a wall…"),
+                             lambda: host.activate(app, WALL_TOOL_KEY))
+        walls_menu.addAction(_t("Walls panel…"),
+                             lambda: app.show_panel(walls_dock))
+        # The take-off is a wall's take-off first — m² of brick per skin — and
+        # lists the doors and windows by size after that.
+        walls_menu.addAction(_t("Take-off…"),
+                             lambda: app.show_panel(takeoff_dock))
+        walls_menu.addSeparator()
+        walls_menu.addAction(_t("Export wall types…"),
+                             lambda: _export_walls(app, walls_panel))
+        walls_menu.addAction(_t("Import wall types…"),
+                             lambda: _import_walls(app, walls_panel))
+        walls_menu.addAction(_t("Wall types folder…"),
+                             lambda: _wall_types_folder(app))
 
     app.add_context_menu(_context_menu)
     app.add_outliner_kind(_outliner_kind)
