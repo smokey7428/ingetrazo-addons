@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import math
 
+from . import library
 from . import profiles
 
 #: The key in ``group.ext``. The same document-data namespace as the openings:
@@ -47,23 +48,60 @@ MIN_SKIN = 0.010
 MAX_SKINS = 8
 
 
-def defaults(name: str | None = None) -> dict:
-    """A fresh wall of a named build-up, or of the first one."""
-    return _from_profile(name if name in profiles.WALLS else KINDS[0])
+def defaults(name: str | None = None, language: str | None = None) -> dict:
+    """A fresh wall of a named build-up, or of the first one.
+
+    ``language`` is the language the skins are **named** in, not the language
+    the panel shows them in: a Dutch build-up is stored with Dutch layer names
+    in Dutch whatever the interface is set to, and the panel translates the role
+    for display. Omitting it takes the library's own language.
+    """
+    return _from_profile(name if name in profiles.WALLS else KINDS[0], language)
 
 
-def _from_profile(name: str) -> dict:
-    entry = profiles.WALLS[name]
+def _from_profile(name: str, language: str | None = None) -> dict:
+    """The build-up of a named type, as a new wall.
+
+    The build-up itself comes from the library, so a skin carries the **role**
+    it plays (``outer_leaf``) next to the name it was created with — the role is
+    what survives a change of language, the name is what the document says.
+    """
+    entry = library.wall(name)
+    if entry is not None:
+        filled = library.named(entry, language)
+        skins = [{"role": skin["role"], "name": skin["name"],
+                  "thickness": float(skin["thickness"]),
+                  "material": skin["material"]}
+                 for skin in filled["skins"]]
+    else:                                 # the library could not be read
+        skins = [{"role": library.role_for(skin[0]) or "", "name": skin[0],
+                  "thickness": float(skin[1]), "material": skin[2]}
+                 for skin in profiles.WALLS[name]["skins"]]
     return {
         "kind": KIND,
         "type": name,
-        "height": float(entry["height"]),
+        "height": float(profiles.WALLS[name]["height"]),
         "base": 0.0,
         "path": [],                       # [(x, y), …] in plan, metres
-        "skins": [{"name": skin[0], "thickness": float(skin[1]),
-                   "material": skin[2]} for skin in entry["skins"]],
+        "skins": skins,
         "openings": [],                   # the host's own opening requests
     }
+
+
+def _role(skin: dict) -> str:
+    """Which role a skin plays: the one it states, or the one its name means.
+
+    This is the migration. A wall drawn before the library existed stores
+    ``{"name": "Buitenblad"}`` and no role, and ``"Buitenblad"`` is the Dutch
+    label of ``outer_leaf`` — so the role is *recovered* rather than guessed at.
+    A name that means nothing in any language stays free text with no role,
+    which is what a skin the user typed is. An unknown role is dropped rather
+    than stored: a role that is not in the table cannot be shown at all.
+    """
+    role = str(skin.get("role") or "").strip()
+    if role and library.role_label(role):
+        return role
+    return library.role_for(skin.get("name")) or ""
 
 
 def normalize(raw: dict | None) -> dict:
@@ -96,8 +134,13 @@ def normalize(raw: dict | None) -> dict:
         thickness = _number(skin.get("thickness"), 0.0, MIN_SKIN, 0.5)
         if thickness < MIN_SKIN:
             continue
+        role = _role(skin)
+        label = str(skin.get("name") or "").strip()
+        if not label:
+            label = library.role_label(role) or f"Skin {len(skins) + 1}"
         skins.append({
-            "name": str(skin.get("name") or f"Skin {len(skins) + 1}").strip(),
+            "role": role,
+            "name": label,
             "thickness": thickness,
             "material": str(skin.get("material") or "Wall").strip() or "Wall",
         })

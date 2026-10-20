@@ -1,0 +1,106 @@
+{
+  "locale": "nl",
+  "country": "NL",
+  "note": "Dutch wall build-ups. Thicknesses are millimetres, listed from the outside in. `reviewed: true` means a person has signed the entry off; everything else is a draft drawn from Dutch practice and must be checked before anyone builds from it. Performance fields are present and deliberately empty: this extension does not compute or claim an Rc or U-value.",
+
+  "walls": [
+    {
+      "key": "nl.spouwmuur.100-100-100",
+      "legacy": "spouwmuur",
+      "kind": "exterior",
+      "name": {
+        "nl": "Spouwmuur 100-100-100",
+        "en-GB": "Cavity wall 100-100-100",
+        "de": "Zweischalige Wand 100-100-100"
+      },
+      "source": "The build-up this extension has shipped since openings 1.1; unchanged here, so a wall drawn before the library existed is the same wall.",
+      "checked": "2026-10-20",
+      "reviewed": true,
+      "skins": [
+        {"role": "outer_leaf", "thickness": 100, "material": "Brick"},
+        {"role": "insulation", "thickness": 100, "material": "Insulation"},
+        {"role": "inner_leaf", "thickness": 100, "material": "Block"}
+      ]
+    },
+    {
+      "key": "nl.binnenwand.100",
+      "legacy": "binnenwand",
+      "kind": "interior",
+      "name": {
+        "nl": "Binnenwand 100",
+        "en-GB": "Inner wall 100",
+        "de": "Innenwand 100"
+      },
+      "source": "The single-leaf partition this extension has shipped since openings 1.1; unchanged here.",
+      "checked": "2026-10-20",
+      "reviewed": true,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 100, "material": "Block"}
+      ]
+    },
+    {
+      "key": "nl.spouwmuur.100-120-100",
+      "kind": "exterior",
+      "name": {
+        "nl": "Spouwmuur 100-120-100",
+        "en-GB": "Cavity wall 100-120-100"
+      },
+      "source": "Draft from current Dutch housing practice: a masonry outer leaf, a fully filled cavity, and a block inner leaf. To be checked against the BRG standard details and the Rc the Bouwbesluit asks for before it is marked reviewed.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "outer_leaf", "thickness": 100, "material": "Brick"},
+        {"role": "insulation", "thickness": 120, "material": "Insulation"},
+        {"role": "inner_leaf", "thickness": 100, "material": "Block"}
+      ]
+    },
+    {
+      "key": "nl.houtskeletbouw.25-25-12-145-50-12",
+      "kind": "exterior",
+      "name": {
+        "nl": "Houtskeletbouw buitenwand",
+        "en-GB": "Timber-frame external wall"
+      },
+      "source": "Draft of a Dutch timber-frame build-up: timber cladding, a ventilated cavity, sheathing, an insulated stud zone, an installation void, and plasterboard.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "Two honest limits. The studs are not modelled: the 145 mm zone is counted as insulation, so its mass is the insulation's, not the frame's. And a vapour barrier is thinner than the 10 mm a skin may be, so it is not a layer here — it is part of the build-up, not of this stack.",
+      "skins": [
+        {"role": "cladding", "thickness": 25, "material": "Timber"},
+        {"role": "cavity", "thickness": 25, "material": "Air"},
+        {"role": "sheathing", "thickness": 12, "material": "Timber"},
+        {"role": "insulation", "thickness": 145, "material": "Insulation"},
+        {"role": "service_void", "thickness": 50, "material": "Air"},
+        {"role": "finish", "thickness": 12, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "nl.kalkzandsteen.100",
+      "kind": "interior",
+      "name": {
+        "nl": "Kalkzandsteenwand 100",
+        "en-GB": "Calcium-silicate wall 100"
+      },
+      "source": "Draft: a 100 mm calcium-silicate block partition, the common Dutch non-loadbearing inner wall. To be checked against the block's actual format and the finish it gets on site.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 100, "material": "LimeSandStone"}
+      ]
+    },
+    {
+      "key": "nl.woningscheidend.200",
+      "kind": "interior",
+      "name": {
+        "nl": "Woningscheidende wand 200",
+        "en-GB": "Party wall 200"
+      },
+      "source": "Draft: a 200 mm calcium-silicate party wall between dwellings. The acoustic and fire requirements a party wall actually has to meet are not represented here — only its build-up.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "structure", "thickness": 200, "material": "LimeSandStone"}
+      ]
+    }
+  ]
+}

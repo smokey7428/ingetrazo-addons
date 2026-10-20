@@ -1,0 +1,37 @@
+{
+  "note": "The words, in every language the library speaks. A wall in data/walls/nl.json references a role and a material by key; the label comes from here, so a German reader browsing the Dutch library sees Dutch wall names with German layer names. Material keys are the names already used in scene.materials (Brick, Block, ...), so a document drawn before the library existed is unchanged and the take-off does not split Brick from Ziegel.",
+
+  "roles": {
+    "outer_leaf":     {"nl": "Buitenblad",      "en-GB": "Outer leaf",      "de": "Außenschale",       "es-ES": "Hoja exterior",             "es-PE": "Muro exterior"},
+    "inner_leaf":     {"nl": "Binnenblad",      "en-GB": "Inner leaf",      "de": "Innenschale",       "es-ES": "Hoja interior",             "es-PE": "Muro interior"},
+    "cavity":         {"nl": "Spouw",           "en-GB": "Cavity",          "de": "Luftschicht",       "es-ES": "Cámara de aire",            "es-PE": "Cámara de aire"},
+    "insulation":     {"nl": "Isolatie",        "en-GB": "Insulation",      "de": "Dämmung",           "es-ES": "Aislamiento",               "es-PE": "Aislamiento"},
+    "render":         {"nl": "Buitenpleister",  "en-GB": "Render",          "de": "Außenputz",         "es-ES": "Revoco",                    "es-PE": "Tarrajeo"},
+    "plaster":        {"nl": "Binnenpleister",  "en-GB": "Plaster",         "de": "Innenputz",         "es-ES": "Enlucido",                  "es-PE": "Tarrajeo interior"},
+    "finish":         {"nl": "Afwerking",       "en-GB": "Finish",          "de": "Oberfläche",        "es-ES": "Acabado",                   "es-PE": "Acabado"},
+    "timber_stud":    {"nl": "Regelwerk",       "en-GB": "Stud",            "de": "Ständerwerk",       "es-ES": "Montante de madera",        "es-PE": "Parante de madera"},
+    "sheathing":      {"nl": "Beplating",       "en-GB": "Sheathing",       "de": "Beplankung",        "es-ES": "Tablero",                   "es-PE": "Placa"},
+    "vapour_barrier": {"nl": "Dampremmer",      "en-GB": "Vapour barrier",  "de": "Dampfsperre",       "es-ES": "Barrera de vapor",          "es-PE": "Barrera de vapor"},
+    "service_void":   {"nl": "Installatieruimte", "en-GB": "Service void",  "de": "Installationsebene", "es-ES": "Cámara de instalaciones",  "es-PE": "Cámara de instalaciones"},
+    "cladding":       {"nl": "Gevelbekleding",  "en-GB": "Cladding",        "de": "Fassadenbekleidung", "es-ES": "Revestimiento",            "es-PE": "Revestimiento"},
+    "masonry_veneer": {"nl": "Buitenspouwblad", "en-GB": "Masonry veneer",  "de": "Vormauerschale",    "es-ES": "Hoja exterior de fábrica",  "es-PE": "Muro exterior de ladrillo"},
+    "structure":      {"nl": "Draagconstructie", "en-GB": "Structure",      "de": "Tragschicht",       "es-ES": "Estructura",                "es-PE": "Estructura"}
+  },
+
+  "materials": {
+    "Air":          {"density": 0.0,    "ifc": null,              "labels": {"nl": "Lucht",             "en-GB": "Air",                "de": "Luft",              "es-ES": "Aire",                    "es-PE": "Aire"}},
+    "Brick":        {"density": 1800.0, "ifc": "Brick",           "labels": {"nl": "Baksteen",          "en-GB": "Brick",              "de": "Ziegel",            "es-ES": "Ladrillo",                "es-PE": "Ladrillo"}},
+    "Block":        {"density": 700.0,  "ifc": "Concrete block",  "labels": {"nl": "Betonblok",         "en-GB": "Concrete block",     "de": "Betonstein",        "es-ES": "Bloque de hormigón",      "es-PE": "Bloque de concreto"}},
+    "ClayBlock":    {"density": 800.0,  "ifc": "Clay block",      "labels": {"nl": "Keramisch blok",    "en-GB": "Clay block",         "de": "Ziegelhohlblock",   "es-ES": "Bloque cerámico",         "es-PE": "Bloque de arcilla"}},
+    "AAC":          {"density": 500.0,  "ifc": "Aerated concrete", "labels": {"nl": "Gasbeton",         "en-GB": "Aerated concrete",   "de": "Porenbeton",        "es-ES": "Hormigón celular",        "es-PE": "Concreto celular"}},
+    "LimeSandStone": {"density": 1800.0, "ifc": "Calcium silicate", "labels": {"nl": "Kalkzandsteen",   "en-GB": "Calcium silicate",   "de": "Kalksandstein",     "es-ES": "Ladrillo silicocalcáreo", "es-PE": "Ladrillo sílico-calcáreo"}},
+    "Concrete":     {"density": 2400.0, "ifc": "Concrete",        "labels": {"nl": "Beton",             "en-GB": "Concrete",           "de": "Beton",             "es-ES": "Hormigón",                "es-PE": "Concreto"}},
+    "Timber":       {"density": 500.0,  "ifc": "Timber",          "labels": {"nl": "Hout",              "en-GB": "Timber",             "de": "Holz",              "es-ES": "Madera",                  "es-PE": "Madera"}},
+    "Steel":        {"density": 7850.0, "ifc": "Steel",           "labels": {"nl": "Staal",             "en-GB": "Steel",              "de": "Stahl",             "es-ES": "Acero",                   "es-PE": "Acero"}},
+    "Insulation":   {"density": 30.0,   "ifc": "Mineral wool",    "labels": {"nl": "Isolatie",          "en-GB": "Mineral wool",       "de": "Mineralwolle",      "es-ES": "Lana mineral",            "es-PE": "Lana mineral"}},
+    "EPS":          {"density": 25.0,   "ifc": "EPS",             "labels": {"nl": "Polystyreen (EPS)", "en-GB": "EPS",                "de": "Polystyrol (EPS)",  "es-ES": "Poliestireno (EPS)",      "es-PE": "Poliestireno (EPS)"}},
+    "PIR":          {"density": 32.0,   "ifc": "PIR",             "labels": {"nl": "PIR-schuim",        "en-GB": "PIR",                "de": "PIR-Schaum",        "es-ES": "Espuma PIR",              "es-PE": "Espuma PIR"}},
+    "Gypsum":       {"density": 800.0,  "ifc": "Gypsum board",    "labels": {"nl": "Gipsplaat",         "en-GB": "Plasterboard",       "de": "Gipsplatte",        "es-ES": "Placa de yeso",           "es-PE": "Placa de yeso"}},
+    "Render":       {"density": 1800.0, "ifc": "Cement render",   "labels": {"nl": "Stucwerk",          "en-GB": "Render",             "de": "Putz",              "es-ES": "Mortero",                 "es-PE": "Mortero"}}
+  }
+}

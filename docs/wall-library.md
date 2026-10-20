@@ -1,6 +1,8 @@
 # A wall library: five countries, five languages — the plan
 
-Status: **plan, not built.** This is the spec to approve before any code.
+Status: **the data layer is built** (`library.py`, `data/walls/labels.json`,
+`data/walls/nl.json`, 288 checks). The picker and the four remaining libraries
+are next; the decisions below are settled.
 
 ## Goal
 
@@ -203,18 +205,49 @@ IngeTrazo release is the moment to re-check the ones whose standards moved.
 | **P3** | Your review, flags flipped, release 1.2 with the new entries | the library becomes trustworthy |
 | **P4** | *Optional:* an office overlay (`~/.local/share/ingetrazo/openings/walls/*.json`) | office standards without a release each time |
 
-## Open questions for you
+## Decided
 
-1. **Just these five libraries?** `nl`, `en-GB`, `de`, `es-ES`, `es-PE` — or is a
-   sixth expected (e.g. `fr`, `pt-BR`, `en-US`)?
-2. **How do the two Spanish ones differ for you?** Shared file with a handful of
-   differing labels, or two independent label sets? My assumption: two label
-   sets that mostly agree, differing where the trades differ (`aislamiento` /
-   `aislante`, `hoja` / `muro`).
-3. **Interface language beyond the library's:** if a user picks `de` for the
-   interface, do we also translate the *extension's* panel strings into German?
-   Today `_TEXTS` has `es` only; `nl`, `de` and the Spanish variants would need
-   writing.
-4. **Where do `default_height` and a default sill belong** — in the library
-   entry, or always the panel's own value? A storey height is not a property of
-   a wall type; I lean towards the panel keeping it and the library ignoring it.
+1. **The five libraries, and a sixth is a file.** `nl`, `en-GB`, `de`, `es-ES`,
+   `es-PE`. `library.languages()` reports *any* `*.json` it finds in
+   `data/walls/`, so adding `en-US` or `pt-BR` later is a data file and nothing
+   else — no code, no list to remember to edit.
+2. **Two Spanish label sets that mostly agree.** `es-ES` and `es-PE` differ where
+   the trades differ (`aislamiento`/`aislante`, `hoja`/`muro`), and a missing
+   label falls back to the other Spanish before it falls back to English.
+3. **Library only, for now.** Wall and layer names are translated in five
+   languages; the extension's own panel strings stay English + Spanish. A
+   German user gets German walls and German layer names, and English buttons.
+4. **The panel keeps the height.** A library entry carries its layers and
+   nothing about the storey: `height` stays where it is, in the wall and in the
+   panel. (The data model still *allows* a height, so a future entry can suggest
+   one; nothing uses it today.)
+
+## What building the data layer taught us
+
+Recorded here because each one changes what a wall can honestly say:
+
+1. **A membrane is thinner than a skin may be.** `MIN_SKIN` is 10 mm, so a
+   vapour barrier (0.2 mm) cannot be a layer. A build-up that needs one carries
+   a `note` instead — the timber-frame entry does exactly that. Lowering the
+   limit is a geometry decision, not a data one.
+2. **A stud zone is one skin of one material.** The 145 mm insulated stud zone
+   of a timber frame is counted as insulation, so its *mass* is the
+   insulation's, not the frame's. The entry says so in its note. Modelling
+   timber and insulation side by side in one layer needs a composite skin, which
+   the generator does not have.
+3. **Material keys stay the names `scene.materials` already uses** — `Brick`,
+   `Block`, `Insulation` — rather than the lowercase ids this document first
+   proposed. Nothing already drawn changes, the take-off does not split
+   `Brick` from `Ziegel`, and the translated name is display only. The
+   `labels.json` entry carries the density and the IFC material name.
+4. **`profiles.WALLS` is now a view of the library**, so the panel, the tool and
+   every stored document kept working while the picker is still the old combo
+   box: same legacy keys (`spouwmuur`, `binnenwand`), same `(name, thickness,
+   material)` skins. The literal fallback in `profiles.py` is what answers if
+   the data cannot be read, and a test keeps the two equal so they cannot drift.
+
+## Still open (P1b onwards)
+
+The picker: a searchable, grouped list with a draft marker, in place of the
+combo box. And the four remaining libraries, which are the content work.
+

@@ -429,14 +429,19 @@ its symbol behind — hence a "Refresh plan symbols" command.
 | `scenes.py` | The Plan / Elevation / 3D scenes, and `refresh` to put a moved door's symbol back. |
 | `schedule.py`, `takeoff_panel.py` | **The Take-off**: per-skin m²/m³/kg and the doors and windows by size, with a CSV of the same rows. Pure rows in `schedule.py`, so the numbers are tested without Qt. |
 | `walls.py`, `wall_geometry.py`, `wall_object.py`, `wall_tool.py`, `wall_panel.py` | **A wall of our own**: skins along a polyline, mitred, regenerated from its parameters — so the wall keeps being a wall. The **Walls** panel configures the build-up and **Draw a wall** draws it. |
-| `profiles.py` | **The Dutch standards**, in one place: timber sections (kozijnhout 67 × 114, raamhout 54 × 67), glazing (hr++ 20 mm), and the window and door types with their sizes and Dutch names. Adding a type later is a line of data here, not a change to the geometry. |
+| `profiles.py` | **The Dutch standards**, in one place: timber sections (kozijnhout 67 × 114, raamhout 54 × 67), glazing (hr++ 20 mm), and the window and door types with their sizes and Dutch names. Adding a type later is a line of data here, not a change to the geometry. Wall build-ups are **not** here any more — they are data, below. |
+| `library.py` | **The wall library**: reads `data/walls/<locale>.json`, converts millimetres to metres at one boundary, and answers the questions the rest of the extension asks — a role's label in the user's language, a material's density, which role a stored skin name means, and which walls match a search in *any* of the five languages. Pure: no Qt, no scene. |
+| `data/walls/` | `labels.json` (14 roles and 15 materials, five languages, densities and IFC names) and one file per country. Thicknesses are **millimetres** here and metres everywhere else. |
 | `__init__.py` | `setup(app)`: panel, tool, its own submenu, a right-click entry and the Browser's Type column. |
 
 Coordinates: **x** along the wall (0 at the left jamb), **y** into the wall
 (0 on the clicked face), **z** up (0 on the floor).
 
-Tests: **243 checks** across `test_openings_geometry.py` (132),
-`test_openings_object.py` (73) and `test_openings_panel.py` (38). They prove
+Tests: **288 checks** in `test_openings_library.py` (the data: every wall's
+roles and materials resolve in all five languages, the units change in one
+place, a stored "Buitenblad" recovers its role, and nothing drafted is sold as
+reviewed), plus **653** across `test_openings_geometry.py`, `test_openings_object.py`,
+`test_openings_panel.py` and `test_openings_walls.py`. They prove
 each part is a closed solid with a **positive volume** — the same test
 `core/bim.py` uses before it will report a volume — that the volumes match the
 arithmetic, that the leaf turns correctly for all four handing/swing

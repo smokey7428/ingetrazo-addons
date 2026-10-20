@@ -33,8 +33,18 @@ Types
 
     If your office keeps its own list, change it here and every default, and
     the preset row in the panel, follows.
+
+Walls
+    Wall build-ups are not here any more: they are **data**, one file per
+    country in ``data/walls/``, with the words in ``labels.json`` beside them
+    (see ``library.py`` for why). What this module keeps is the shape the rest
+    of the extension already reads — ``WALLS`` is the Dutch library in that
+    shape, and the literals below are what answers if the data cannot be read,
+    so a bad file costs the extra walls rather than the panel.
 """
 from __future__ import annotations
+
+from . import library
 
 MM = 0.001
 
@@ -48,8 +58,10 @@ SECTIONS = {
 
 #: Bulk density of the materials a wall is built from, kg/m³ — what a builder
 #: orders in tonnes and what a take-off bills in kilos. A rough, honest figure
-#: per material, not a structural value.
-DENSITY = {
+#: per material, not a structural value. The library's material table is the
+#: source; this is what answers if it cannot be read, and what fills in for a
+#: material the library does not carry.
+_DENSITY = {
     "Brick": 1800.0,
     "Insulation": 30.0,
     "Block": 700.0,
@@ -58,6 +70,9 @@ DENSITY = {
     "Steel": 7850.0,
 }
 
+DENSITY = dict(_DENSITY)
+DENSITY.update(library.densities())
+
 #: Glazing thicknesses, by name.
 GLASS = {
     "enkel": 4 * MM,
@@ -65,11 +80,15 @@ GLASS = {
     "triple": 28 * MM,
 }
 
-#: Wall build-ups, the way Dutch practice builds them. A skin is
-#: ``(name, thickness, material)``, listed from the outside in; the wall is
-#: centred on the line it is drawn along, so the list reads left to right as you
-#: walk the path. Adding a build-up later is a line of data.
-WALLS = {
+#: Wall build-ups, the way Dutch practice builds them, in the shape the rest of
+#: the extension reads. A skin is ``(name, thickness, material)``, listed from
+#: the outside in; the wall is centred on the line it is drawn along, so the
+#: list reads left to right as you walk the path.
+#:
+#: The data is in ``data/walls/nl.json`` — this is the fallback, and the two are
+#: kept equal by a test, so the literal cannot drift from the file it stands in
+#: for.
+_FALLBACK_WALLS = {
     "spouwmuur": {
         "nl": "Spouwmuur",
         "en": "Cavity wall",
@@ -89,6 +108,8 @@ WALLS = {
         ],
     },
 }
+
+WALLS = library.profile_walls("nl") or dict(_FALLBACK_WALLS)
 
 #: The window types. ``sash`` names the section of the part that opens;
 #: ``None`` is a fixed window, which has none.
