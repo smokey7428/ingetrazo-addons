@@ -64,7 +64,7 @@
       "source": "Draft of a Dutch timber-frame build-up: timber cladding, a ventilated cavity, sheathing, an insulated stud zone, an installation void, and plasterboard.",
       "checked": "2026-10-20",
       "reviewed": false,
-      "note": "Two honest limits. The studs are not modelled: the 145 mm zone is counted as insulation, so its mass is the insulation's, not the frame's. And a vapour barrier is thinner than the 10 mm a skin may be, so it is not a layer here — it is part of the build-up, not of this stack.",
+      "note": "Two honest limits. The studs are not modelled: the 145 mm zone is counted as insulation, so its mass is the insulation's, not the frame's. And a vapour barrier is thinner than the 3 mm a skin may be, so it is not a layer here — it is part of the build-up, not of this stack.",
       "skins": [
         {"role": "cladding", "thickness": 25, "material": "Timber"},
         {"role": "cavity", "thickness": 25, "material": "Air"},
