@@ -729,7 +729,9 @@ ifcopenshell is not installed on this machine.
 `./dev/install.sh` links it; **Extensions ▸ Doors & windows** for the openings
 and **Extensions ▸ Walls** for the walls, each with its own tray tab. The two
 menus are deliberate: the walls outgrew the menu they started in, and a wall type
-file listed under "Doors & windows" read as an accessory to a door. The interactive tool registers through `host.py`, the one private-API
+file listed under "Doors & windows" read as an accessory to a door.
+
+The interactive tool registers through `host.py`, the one private-API
 dependency — that module refuses gracefully on a build that has moved those
 members, so a future IngeTrazo shows a sentence instead of a traceback.
 
