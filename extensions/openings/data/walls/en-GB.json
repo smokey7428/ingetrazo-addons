@@ -1,0 +1,267 @@
+{
+  "locale": "en-GB",
+  "country": "United Kingdom",
+  "note": "UK wall build-ups. Thicknesses are millimetres, listed from the outside in. `reviewed: true` means a person has signed the entry off; everything here is a draft from published UK practice and must be checked before anyone builds from it. Performance fields are present and deliberately empty: this extension does not compute or claim a U-value.",
+
+  "walls": [
+    {
+      "key": "en-GB.cavity.102-100-100",
+      "kind": "exterior",
+      "name": {"en-GB": "Cavity wall 102-100-100"},
+      "source": "Draft: the filled masonry cavity wall UK housebuilding has built since the Part L 2013 uplift — 102 mm brick, a fully filled cavity, 100 mm block. To be checked against a current NHBC detail before it is reviewed.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "outer_leaf", "thickness": 102, "material": "Brick"},
+        {"role": "insulation", "thickness": 100, "material": "Insulation"},
+        {"role": "inner_leaf", "thickness": 100, "material": "Block"}
+      ]
+    },
+    {
+      "key": "en-GB.cavity.102-125-100",
+      "kind": "exterior",
+      "name": {"en-GB": "Cavity wall 102-125-100"},
+      "source": "Draft: the same cavity with 125 mm of fill, the thickness most new-build plots are detailed with after the 2022 uplift. Verify the fill and the block together, not each alone.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "outer_leaf", "thickness": 102, "material": "Brick"},
+        {"role": "insulation", "thickness": 125, "material": "Insulation"},
+        {"role": "inner_leaf", "thickness": 100, "material": "Block"}
+      ]
+    },
+    {
+      "key": "en-GB.cavity.102-150-100",
+      "kind": "exterior",
+      "name": {"en-GB": "Cavity wall 102-150-100"},
+      "source": "Draft: a deep-filled cavity, used where the wall has to reach a tighter target than 125 mm of fill manages — and where the cavity stays wide enough to be built cleanly.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "outer_leaf", "thickness": 102, "material": "Brick"},
+        {"role": "insulation", "thickness": 150, "material": "Insulation"},
+        {"role": "inner_leaf", "thickness": 100, "material": "Block"}
+      ]
+    },
+    {
+      "key": "en-GB.cavity.102-75-100",
+      "kind": "exterior",
+      "name": {"en-GB": "Cavity wall 102-75-100 (older stock)"},
+      "source": "Draft: the pre-2013 cavity, which is what most of the existing housing stock actually is. Useful when modelling a building that stands, not one that is going up.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "outer_leaf", "thickness": 102, "material": "Brick"},
+        {"role": "insulation", "thickness": 75, "material": "Insulation"},
+        {"role": "inner_leaf", "thickness": 100, "material": "Block"}
+      ]
+    },
+    {
+      "key": "en-GB.ewi-block.15-100-140",
+      "kind": "exterior",
+      "name": {"en-GB": "Rendered insulation on blockwork 15-100-140"},
+      "source": "Draft: external wall insulation on a 140 mm block inner leaf, finished with a thin render. The common answer where the outer skin is not brick.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "insulation", "thickness": 100, "material": "EPS"},
+        {"role": "inner_leaf", "thickness": 140, "material": "Block"}
+      ]
+    },
+    {
+      "key": "en-GB.ewi-brick-retrofit.15-90-215",
+      "kind": "exterior",
+      "name": {"en-GB": "External insulation on solid brick 15-90-215"},
+      "source": "Draft: retrofit insulation over a solid 215 mm brick wall — the standard upgrade for pre-1930 housing. The wall it covers is 215 mm of brick, which is one brick length and not a guess.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "insulation", "thickness": 90, "material": "EPS"},
+        {"role": "structure", "thickness": 215, "material": "Brick"}
+      ]
+    },
+    {
+      "key": "en-GB.rendered-block.15-190",
+      "kind": "exterior",
+      "name": {"en-GB": "Rendered blockwork 15-190"},
+      "source": "Draft: a single-leaf rendered block wall, as built for garages, extensions and much of the inter-war stock. No cavity, so no insulation — this is a wall to model as it is, not as it should be.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "structure", "thickness": 190, "material": "Block"}
+      ]
+    },
+    {
+      "key": "en-GB.timberframe-brick.102-50-9-140-12.5",
+      "kind": "exterior",
+      "name": {"en-GB": "Timber frame with brick outer leaf"},
+      "source": "Draft: the timber-frame wall that carries a masonry outer leaf — the Scottish housebuilder's standard, and increasingly used elsewhere.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "The 140 mm zone is the stud, counted as insulation: its mass is the insulation's, not the frame's. A vapour barrier is thinner than a skin may be, so it is part of the build-up and not a layer here.",
+      "skins": [
+        {"role": "outer_leaf", "thickness": 102, "material": "Brick"},
+        {"role": "cavity", "thickness": 50, "material": "Air"},
+        {"role": "sheathing", "thickness": 9, "material": "Timber"},
+        {"role": "insulation", "thickness": 140, "material": "Insulation"},
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "en-GB.timberframe-cladding.20-25-9-140-12.5",
+      "kind": "exterior",
+      "name": {"en-GB": "Timber frame with timber cladding"},
+      "source": "Draft: a ventilated timber-clad frame — cladding, a drained cavity, sheathing, the stud zone and a plasterboard lining.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "As above: the stud zone is counted as insulation, so the frame's mass is missing from the take-off.",
+      "skins": [
+        {"role": "cladding", "thickness": 20, "material": "Timber"},
+        {"role": "cavity", "thickness": 25, "material": "Air"},
+        {"role": "sheathing", "thickness": 9, "material": "Timber"},
+        {"role": "insulation", "thickness": 140, "material": "Insulation"},
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "en-GB.concrete-frame.15-100-60-100",
+      "kind": "exterior",
+      "name": {"en-GB": "Concrete frame infill panel 15-100-60-100"},
+      "source": "Draft: the infill panel between the columns of a concrete frame — an outer block leaf, a filled cavity and an inner block leaf. The frame itself is not part of this wall.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "outer_leaf", "thickness": 100, "material": "Block"},
+        {"role": "insulation", "thickness": 60, "material": "Insulation"},
+        {"role": "inner_leaf", "thickness": 100, "material": "Block"}
+      ]
+    },
+
+    {
+      "key": "en-GB.block.100",
+      "kind": "interior",
+      "name": {"en-GB": "Block partition 100"},
+      "source": "Draft: a 100 mm block partition, the default non-loadbearing wall in UK domestic work.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 100, "material": "Block"}
+      ]
+    },
+    {
+      "key": "en-GB.block.140",
+      "kind": "interior",
+      "name": {"en-GB": "Block partition 140"},
+      "source": "Draft: a 140 mm block wall — a partition that also carries, or one that has to meet a fire or acoustic line a 100 mm cannot.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 140, "material": "Block"}
+      ]
+    },
+    {
+      "key": "en-GB.block.215",
+      "kind": "interior",
+      "name": {"en-GB": "Block party wall 215"},
+      "source": "Draft: a solid 215 mm block separating wall between dwellings. What it has to meet acoustically and in fire is a requirement, not a property of this stack.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "structure", "thickness": 215, "material": "Block"}
+      ]
+    },
+    {
+      "key": "en-GB.party-cavity.100-50-100",
+      "kind": "interior",
+      "name": {"en-GB": "Cavity party wall 100-50-100"},
+      "source": "Draft: two block leaves with a 50 mm cavity between them — the other way a separating wall is built, and the one that leaves room for a service zone.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 100, "material": "Block"},
+        {"role": "cavity", "thickness": 50, "material": "Air"},
+        {"role": "inner_leaf", "thickness": 100, "material": "Block"}
+      ]
+    },
+    {
+      "key": "en-GB.stud.12.5-89-12.5",
+      "kind": "interior",
+      "name": {"en-GB": "Stud partition 89"},
+      "source": "Draft: the timber stud partition of domestic work — 89 mm studs and a plasterboard each side.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "The 89 mm zone is the stud, counted as timber: an insulated stud partition is a different wall (see the acoustic one).",
+      "skins": [
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"},
+        {"role": "timber_stud", "thickness": 89, "material": "Timber"},
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "en-GB.stud-acoustic.12.5-75-12.5",
+      "kind": "interior",
+      "name": {"en-GB": "Insulated stud partition 75"},
+      "source": "Draft: a stud partition with the cavity filled — the party-wall and bedroom-wall detail. The studs are not modelled, so the 75 mm zone is counted as insulation.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "Counted as insulation, so the frame's mass is missing; the acoustic performance is a matter for the specification, not for this stack.",
+      "skins": [
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"},
+        {"role": "insulation", "thickness": 75, "material": "Insulation"},
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "en-GB.stud-service.12.5-89-25-12.5",
+      "kind": "interior",
+      "name": {"en-GB": "Stud partition with a service void 89-25"},
+      "source": "Draft: a stud partition with a 25 mm service zone on one side, so the pipes do not have to be buried in the wall they run through.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"},
+        {"role": "timber_stud", "thickness": 89, "material": "Timber"},
+        {"role": "service_void", "thickness": 25, "material": "Air"},
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "en-GB.brick.102",
+      "kind": "interior",
+      "name": {"en-GB": "Brick partition 102"},
+      "source": "Draft: a half-brick internal wall, which is what a great deal of older housing actually has where a modern drawing would show block.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "structure", "thickness": 102, "material": "Brick"}
+      ]
+    },
+    {
+      "key": "en-GB.concrete.200",
+      "kind": "interior",
+      "name": {"en-GB": "Concrete wall 200"},
+      "source": "Draft: a 200 mm concrete core or flank wall, the structure around which the rest of the building is planned.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "structure", "thickness": 200, "material": "Concrete"}
+      ]
+    },
+    {
+      "key": "en-GB.drylined-block.12.5-100",
+      "kind": "interior",
+      "name": {"en-GB": "Dry-lined block wall 100"},
+      "source": "Draft: a block wall with a plasterboard lining on one face — how a block wall usually ends up looking, and how its thickness usually gets quoted.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 100, "material": "Block"},
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"}
+      ]
+    }
+  ]
+}

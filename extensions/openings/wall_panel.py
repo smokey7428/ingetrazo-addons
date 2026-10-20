@@ -402,7 +402,7 @@ class WallsPanel(QWidget):
         line.addWidget(name, 2)
 
         thickness = QDoubleSpinBox()
-        thickness.setRange(10.0, 500.0)
+        thickness.setRange(library.MIN_SKIN * 1000.0, 500.0)
         thickness.setDecimals(0)
         thickness.setSingleStep(5.0)
         thickness.setValue(float(skin.get("thickness", 0.1)) * 1000.0)

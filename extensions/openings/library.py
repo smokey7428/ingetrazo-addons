@@ -64,9 +64,11 @@ SIBLINGS = {"es-ES": ("es-PE",), "es-PE": ("es-ES",)}
 #: normal case: a height belongs to the storey, not to the build-up.
 DEFAULT_HEIGHT = 2.700
 
-#: What a skin may be, in metres. Below 10 mm it is a line rather than a layer,
-#: which is why a vapour barrier is not a skin (see the timber wall's note).
-MIN_SKIN, MAX_SKIN = 0.010, 0.500
+#: What a skin may be, in metres. **3 mm**, because that is what the walls are:
+#: a render is 6–15 mm and a plasterboard is 12.5, and a library that cannot
+#: hold them is a library that lies about the wall. A membrane (0.2 mm) is
+#: still below this and is therefore a note rather than a layer.
+MIN_SKIN, MAX_SKIN = 0.003, 0.500
 
 #: Skins in one wall, as much as the geometry will take.
 MAX_SKINS = 8

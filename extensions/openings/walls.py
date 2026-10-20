@@ -69,8 +69,9 @@ LIMITS = {
     "thickness": (0.010, 0.500),
 }
 
-#: How thin a skin may be before it is a line rather than a layer.
-MIN_SKIN = 0.010
+#: How thin a skin may be. The library owns this number, so a wall the library
+#: offers can always be edited here without a layer vanishing on the way in.
+MIN_SKIN = library.MIN_SKIN
 MAX_SKINS = 8
 
 

@@ -437,10 +437,11 @@ its symbol behind — hence a "Refresh plan symbols" command.
 Coordinates: **x** along the wall (0 at the left jamb), **y** into the wall
 (0 on the clicked face), **z** up (0 on the floor).
 
-Tests: **288 checks** in `test_openings_library.py` (the data: every wall's
+Tests: **786 checks** in `test_openings_library.py` (the data: every wall's
 roles and materials resolve in all five languages, the units change in one
-place, a stored "Buitenblad" recovers its role, and nothing drafted is sold as
-reviewed), plus **653** across `test_openings_geometry.py`, `test_openings_object.py`,
+place, a stored "Buitenblad" recovers its role, nothing drafted is sold as
+reviewed, and an export→edit→import round trip changes nothing it should not),
+plus **685** across `test_openings_geometry.py`, `test_openings_object.py`,
 `test_openings_panel.py` and `test_openings_walls.py`. They prove
 each part is a closed solid with a **positive volume** — the same test
 `core/bim.py` uses before it will report a volume — that the volumes match the
@@ -553,6 +554,48 @@ our walls it takes the hosted path, otherwise the freeform cut.
    run keeps exactly length × thickness. The skin on the outside of a turn gets
    longer, the one on the inside shorter, and the wall's total is conserved —
    that is the assertion to make, not a per-skin one.
+
+### The wall library — build-ups as data, in five languages
+
+A wall type is **data**, not code: one JSON file per country in
+`extensions/openings/data/walls/`, and `labels.json` with the words beside them.
+`nl` (6 walls, 2 reviewed) and `en-GB` (20 walls, all drafts) ship; `de`,
+`es-ES` and `es-PE` are next. A sixth library is a new file and nothing else —
+`library.languages()` reports any `*.json` it finds.
+
+* **A layer stores a role, not a name**: `outer_leaf`, not `"Buitenblad"`. The
+  label comes from the table, so 14 roles replaced ~400 translated strings, and
+  a German reader browsing the Dutch library sees Dutch wall names with German
+  layer names.
+* **A material stores a key**: `"Brick"`, the name `scene.materials` already
+  uses. Translate it and one document holds `Brick` *and* `Ziegel`, and the
+  take-off splits. Labels are display only; density and the IFC name travel
+  with the key.
+* **Millimetres in the files, metres in the code** — one boundary, `_millimetres`.
+* **Performance is present and empty**: `rc`, `u`, `value_source`,
+  `value_checked`, all `null`, never computed. `u` maps onto
+  `Pset_WallCommon.ThermalTransmittance` when the export learns to carry it.
+* **`MIN_SKIN` is 3 mm**, because a render is 6–15 mm and a plasterboard is
+  12.5: a library that cannot hold them is a library that lies about the wall.
+  A membrane (0.2 mm) is still below it, so a vapour barrier is a `note`, not a
+  layer. An insulated stud zone is one skin of one material, so a timber
+  frame's mass is the insulation's — each such wall says so.
+* **Language and library are two settings** (`QSettings`, a user's preference,
+  not the document's): a Dutch office on a project in Peru gets Dutch menus and
+  Peruvian walls. The library defaults from the app's language, the language is
+  one of five, and the search reads **every** language at once.
+* **A wall keeps its own copy of the stack**, so editing a library entry never
+  changes a wall in an issued drawing. The type key is provenance only.
+
+**Import and export** (Extensions ▸ Import/Export wall types…). The exported
+file *is* a library file — same shape, same validator — so what comes out can be
+dropped beside the shipped libraries as it stands. An import is the validator: a
+wall reaches `~/.local/share/ingetrazo/openings/walls/user.json` only if every
+role and material resolves, every thickness is a skin, and it has a name and a
+key; anything doubtful is skipped and reported where the file was chosen. A
+user's wall with a shipped key **replaces** it (an office correcting a build-up
+without a release), and a wall that already says exactly what the shipped one
+says is not copied.
 
 ### A wall inside a group cannot be cut
 
@@ -935,6 +978,16 @@ classification data to a user should name buildingSMART.
   different SHA-256 every build, and the catalog pins the hash — so
   `dev/release.py` writes fixed timestamps and permissions. Rebuild and compare
   the hash before tagging.
+* **A build-up waiting in a panel is not a wall in the wrong place.** `walls.validate`
+  asked every wall for two path points, and the Walls panel commits its draft
+  through the same function — so picking a type was refused in silence and the
+  tool drew whatever type had been there before. `validate(placed=False)` is a
+  draft: the build-up has no path yet, and the other checks (skins, thickness)
+  still apply. Nothing tested the panel's *type picker*, which is why it lived.
+* **A test loader that re-imports a module gives the panel and the test
+  different copies of it**, and therefore different caches: the panel kept
+  showing the library it had loaded before the test changed it. One module per
+  file, as in the app — `load()` returns `sys.modules[...]` when it is there.
 * A stub that is *wrong* hides real bugs as effectively as real code: the
   class-change rebuild looked broken until `takeAt` was stubbed to Qt's shape,
   and a no-op `narrow()` in the stub hid that it shrinks a button to a 40 px

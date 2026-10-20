@@ -1,8 +1,8 @@
 # A wall library: five countries, five languages — the plan
 
-Status: **the data layer is built** (`library.py`, `data/walls/labels.json`,
-`data/walls/nl.json`, 288 checks). The picker and the four remaining libraries
-are next; the decisions below are settled.
+Status: **P1 is built** — `library.py`, `labels.json`, `nl.json` (6 walls, 2
+reviewed), the picker, import and export, 786 checks. **P2 is half drafted**:
+`en-GB.json` has its 20 walls, all drafts. `de`, `es-ES` and `es-PE` are next.
 
 ## Goal
 

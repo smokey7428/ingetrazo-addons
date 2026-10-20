@@ -362,19 +362,28 @@ def main() -> int:
     # Dutch build-up read by an English user is still read in English.
     walls_panel = app.panels["Walls"].widget
     library = load("library")
-    equal(walls_panel.library_code(), "nl",
-          "the panel offers the Dutch library, the one that ships")
+    equal(walls_panel.library_code(), "en-GB",
+          "an English app opens on the UK library, which is the point of the "
+          "two settings being separate")
     equal(walls_panel.language_code(), "en-GB",
-          "and names it in the app's language, which is English")
+          "and names the walls in the app's language, which is English")
     equal(walls_panel._language_box.count(), 5,
           "every language we have words for is offered")
     equal(walls_panel._library_box.count(), len(library.languages()),
           "and every library we have walls for")
 
+    # Choosing a library is choosing a country, not a language: the Dutch walls
+    # are now named in English.
+    dutch = walls_panel._library_box.findData("nl")
+    walls_panel._library_box.setCurrentIndex(dutch)
+    walls_panel._library_box.currentIndexChanged.emit(dutch)
+    equal(walls_panel.library_code(), "nl", "the Dutch library is chosen")
+    equal(walls_panel.language_code(), "en-GB",
+          "and the words did not change with it")
     equal(walls_panel._type.count(), len(library.walls("nl")),
           "the picker lists the whole library, not a combo of two")
     first = walls_panel._type.itemText(0)
-    for bit in ("300 mm", "3 layers", "reviewed"):
+    for bit in ("Cavity wall 100-100-100", "300 mm", "3 layers", "reviewed"):
         check(bit in first, f"a type says what it is: {first!r} misses {bit!r}")
     check("draft" in walls_panel._type.itemText(2),
           "and a draft says so")
