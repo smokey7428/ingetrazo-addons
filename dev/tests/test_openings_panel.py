@@ -307,6 +307,10 @@ def main() -> int:
     tool_mod = load("tool")
     load("panel")
     extension = load("__init__")
+    # Revealing a folder must not actually open one: a test run would leave
+    # Finder windows behind. Recorded instead, and checked below.
+    launched: list = []
+    extension._launch = launched.append
 
     scene = app_stubs.Scene()
     wall(scene)
@@ -468,6 +472,18 @@ def main() -> int:
     walls_panel.reload_types()
     equal(walls_panel._type.findData("nl.kantoor.100"), -1,
           "and once the file is gone, so is the wall")
+
+    # The folder the user's own types live in, revealed — the hidden one on
+    # macOS, which is why there is a menu entry for it at all.
+    reveal = next((action[1] for menu in app.menus
+                   if not isinstance(menu, tuple)
+                   for action in menu.actions
+                   if action[0].startswith("Wall types folder")), None)
+    check(reveal is not None, "the menu can reveal the wall types folder")
+    reveal()
+    check(bool(launched), "and asks the desktop to open it")
+    check(str(launched[-1]).endswith("walls"),
+          f"the folder the import writes to: {launched[-1]}")
 
     # ---- import and export, through the menu, with a real file ----
     # The generic loop above cancels every dialog; here one is answered, so the

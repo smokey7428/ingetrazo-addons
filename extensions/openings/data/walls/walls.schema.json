@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/smokey7428/ingetrazo-addons/walls.schema.json",
+  "title": "Wall library",
+  "description": "A library of wall build-ups for the IngeTrazo openings extension. Edit it in any editor that understands JSON Schema and it will tell you about a misspelled role or a thickness that is not a thickness while you type, instead of when you import it. Import the file back through Extensions ▸ Doors & windows ▸ Import wall types…; the import checks every wall and reports what it could not read.",
+
+  "type": "object",
+  "required": ["walls"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Where this file's schema is. Keep walls.schema.json beside the library and your editor validates as you type."
+    },
+    "locale": {
+      "type": "string",
+      "description": "Which library this is, and the prefix every key must carry: nl, en-GB, de, es-ES, es-PE. An entry without one belongs to the library named here.",
+      "examples": ["nl", "en-GB", "de", "es-ES", "es-PE"]
+    },
+    "country": {
+      "type": "string",
+      "description": "Free text, for a person reading the file."
+    },
+    "note": {
+      "type": "string",
+      "description": "What this library is and what a draft means. Copied into every export."
+    },
+    "walls": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The build-ups. Ten external and ten internal is what the shipped libraries aim for.",
+      "items": {"$ref": "#/$defs/wall"}
+    }
+  },
+  "additionalProperties": true,
+
+  "$defs": {
+    "wall": {
+      "type": "object",
+      "required": ["key", "kind", "name", "skins"],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z]{2}(-[A-Za-z]+)?\\..+$",
+          "description": "Stable identity, starting with the library code and a dot: nl.spouwmuur.100-120-100. A document may cite it, so renaming a key detaches a wall from its type — change the thicknesses instead.",
+          "examples": ["nl.spouwmuur.100-120-100", "en-GB.cavity.102-100-100"]
+        },
+        "legacy": {
+          "type": "string",
+          "description": "The name this wall was known by before the library existed (spouwmuur, binnenwand). Documents cite it; do not invent new ones."
+        },
+        "locale": {
+          "type": "string",
+          "description": "Only needed when a file holds walls for more than one country. An imported wall always gets one."
+        },
+        "kind": {
+          "enum": ["exterior", "interior"],
+          "enumDescriptions": [
+            "A wall to the outside: weather, insulation, the facade.",
+            "A wall between two inside spaces, or between dwellings."
+          ]
+        },
+        "name": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {"type": "string", "minLength": 1},
+          "description": "The name, per language. At least one language, and en-GB is the one everything falls back to.",
+          "examples": [{"nl": "Spouwmuur 100-120-100", "en-GB": "Cavity wall 100-120-100"}]
+        },
+        "source": {
+          "type": "string",
+          "description": "Where the build-up came from: a standard, a detail, a practice. Say enough that somebody can check it."
+        },
+        "checked": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "The date this entry was last looked at.",
+          "examples": ["2026-10-20"]
+        },
+        "reviewed": {
+          "type": "boolean",
+          "description": "true only when a PERSON has checked this build-up against what is actually built. It must be true or false — the string \"false\" is not false, and the import refuses it."
+        },
+        "note": {
+          "type": "string",
+          "description": "What this build-up cannot say about itself: studs counted as insulation, a membrane thinner than a layer, a requirement it does not meet."
+        },
+        "performance": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Present and deliberately empty. This extension does not compute or claim an Rc or U-value; the fields are here to be filled in from a source, or to be written into IFC later.",
+          "properties": {
+            "rc": {"type": ["number", "null"], "description": "m²K/W, if a source gives one. Not computed."},
+            "u": {"type": ["number", "null"], "description": "W/m²K. Maps onto Pset_WallCommon.ThermalTransmittance when the export carries it."},
+            "value_source": {"type": ["string", "null"]},
+            "value_checked": {"type": ["string", "null"], "pattern": "^(\\d{4}-\\d{2}-\\d{2})?$"}
+          }
+        },
+        "skins": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "description": "The layers, from the outside in. The wall is centred on the line drawn in plan, so this list reads left to right as you walk the path.",
+          "items": {"$ref": "#/$defs/skin"}
+        }
+      }
+    },
+
+    "skin": {
+      "type": "object",
+      "required": ["role", "thickness", "material"],
+      "additionalProperties": false,
+      "properties": {
+        "role": {
+          "enum": ["outer_leaf", "inner_leaf", "cavity", "insulation", "render",
+                   "plaster", "finish", "timber_stud", "sheathing",
+                   "vapour_barrier", "service_void", "cladding",
+                   "masonry_veneer", "structure"],
+          "enumDescriptions": [
+            "The masonry that faces the weather.",
+            "The leaf the inside sees.",
+            "An air space, ventilated or not.",
+            "Mineral wool, EPS, PIR — whatever fills the depth.",
+            "Stuc, putz, revoco, tarrajeo: the cement skin outside.",
+            "The plaster inside a masonry wall.",
+            "A board: plasterboard, boarding, dry lining.",
+            "Timber studs.",
+            "OSB, plywood, wood-fibre board.",
+            "A membrane. Thinner than a skin may be (3 mm), so it is a note rather than a layer.",
+            "A void for pipes and cables.",
+            "A rainscreen: timber, brick slips, panels.",
+            "An outer masonry leaf of a veneer wall.",
+            "Concrete, brick or block carrying the load."
+          ]
+        },
+        "thickness": {
+          "type": "number",
+          "minimum": 3,
+          "maximum": 500,
+          "description": "MILLIMETRES, not metres. 100 is 100 mm. A layer thinner than 3 mm is a membrane and cannot be a skin.",
+          "examples": [100, 12.5, 145]
+        },
+        "material": {
+          "enum": ["Air", "Brick", "Block", "ClayBlock", "AAC", "LimeSandStone",
+                   "Concrete", "Timber", "Steel", "Insulation", "EPS", "PIR",
+                   "Gypsum", "Render", "Adobe", "Stone"],
+          "enumDescriptions": [
+            "Nothing: a cavity, a void.",
+            "Baksteen, Ziegel, ladrillo.",
+            "Betonblok, Betonstein, bloque de hormigón.",
+            "Keramisch blok, Ziegelhohlblock, bloque cerámico.",
+            "Gasbeton, Porenbeton, hormigón celular.",
+            "Kalkzandsteen, Kalksandstein, ladrillo silicocalcáreo.",
+            "Beton, Beton, hormigón.",
+            "Hout, Holz, madera.",
+            "Staal, Stahl, acero.",
+            "Mineral wool, Mineralwolle, lana mineral.",
+            "Polystyrene board.",
+            "Polyisocyanurate board.",
+            "Gipsplaat, Gipsplatte, placa de yeso.",
+            "Stucwerk, Putz, mortero.",
+            "Adobes, Lehm, adobe.",
+            "Natuursteen, Naturstein, piedra."
+          ]
+        },
+        "note": {
+          "type": "string",
+          "description": "Why this layer is the number it is, if that needs saying."
+        }
+      }
+    }
+  }
+}

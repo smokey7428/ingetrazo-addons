@@ -60,6 +60,11 @@ _TEXTS = {
             "{new} nuevos, {updated} actualizados, {known} ya conocidos.",
         "{n} wall type(s) written to {path}":
             "{n} tipos de muro escritos en {path}",
+        "Wall types folder…": "Carpeta de tipos de muro…",
+        "Where your own wall types are kept.":
+            "Dónde se guardan tus propios tipos de muro.",
+        "The folder could not be created: {e}":
+            "No se pudo crear la carpeta: {e}",
         "The panel now shows the {code} library.":
             "El panel muestra ahora la biblioteca {code}.",
         "{code} of them belong to another library.":
@@ -172,6 +177,8 @@ def setup(app) -> None:
                       lambda: _export_walls(app, walls_panel))
         sub.addAction(_t("Import wall types…"),
                       lambda: _import_walls(app, walls_panel))
+        sub.addAction(_t("Wall types folder…"),
+                      lambda: _wall_types_folder(app))
         sub.addSeparator()
         sub.addAction(_t("Make plan / elevation / 3D"),
                       lambda: scenes.make(app.viewport,
@@ -234,8 +241,13 @@ def _import_walls(app, panel) -> None:
 
     from . import library
 
+    # Start where a user's own types live, which is not a folder anybody would
+    # guess: it is hidden, and outside the extension so an update keeps them.
+    folder = library.user_path().parent
+    if not folder.is_dir():
+        folder = Path.home()
     path, _filter = QFileDialog.getOpenFileName(
-        app.window, _t("Import wall types…"), str(Path.home()),
+        app.window, _t("Import wall types…"), str(folder),
         _t("Wall library (*.json)"))
     if not path:
         return
@@ -266,6 +278,41 @@ def _import_walls(app, panel) -> None:
              True)
     else:
         app.viewport.flash_status(summary, 6000)
+
+
+def _launch(path) -> None:
+    """Show a folder in the desktop's file manager.
+
+    Its own function so a test can replace it: a test suite that opens Finder
+    windows is a test suite people stop running.
+    """
+    import os
+    import subprocess
+    import sys
+
+    if sys.platform == "win32":
+        os.startfile(str(path))                      # noqa: S606
+    elif sys.platform == "darwin":
+        subprocess.run(["open", str(path)], check=False)
+    else:
+        subprocess.run(["xdg-open", str(path)], check=False)
+
+
+def _wall_types_folder(app) -> None:
+    """Reveal where the user's own wall types are kept.
+
+    The import writes them there and reads them from there, and the folder is a
+    hidden one on macOS — so a menu entry that opens it is the difference between
+    "editable" and "editable if you know where to look".
+    """
+    from . import library
+
+    folder = library.user_path().parent
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+        _launch(folder)
+    except OSError as failure:
+        _say(app, _t("The folder could not be created: {e}", e=failure), True)
 
 
 def _say(app, text: str, warn: bool = False) -> None:

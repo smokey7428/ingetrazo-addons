@@ -438,11 +438,11 @@ its symbol behind — hence a "Refresh plan symbols" command.
 Coordinates: **x** along the wall (0 at the left jamb), **y** into the wall
 (0 on the clicked face), **z** up (0 on the floor).
 
-Tests: **2451 checks** in `test_openings_library.py` (the data: every wall's
+Tests: **2475 checks** in `test_openings_library.py` (the data: every wall's
 roles and materials resolve in all five languages, the units change in one
 place, a stored "Buitenblad" recovers its role, nothing drafted is sold as
 reviewed, and an export→edit→import round trip changes nothing it should not),
-plus **565** across `test_openings_geometry.py`, `test_openings_object.py`,
+plus **570** across `test_openings_geometry.py`, `test_openings_object.py`,
 `test_openings_panel.py` and `test_openings_walls.py`. They prove
 each part is a closed solid with a **positive volume** — the same test
 `core/bim.py` uses before it will report a volume — that the volumes match the
@@ -589,6 +589,19 @@ new file and nothing else —
   one of five, and the search reads **every** language at once.
 * **A wall keeps its own copy of the stack**, so editing a library entry never
   changes a wall in an issued drawing. The type key is provenance only.
+
+**Editing a wall type by hand** (Extensions ▸ Doors & windows ▸ Wall types
+folder… opens the hidden folder the import writes to). `data/walls/walls.schema.json`
+is a **JSON Schema** for the library format, and an export writes it beside the
+file and points at it with `$schema`, so a folder can be handed to somebody else
+and still validate. In VS Code and most editors that means a misspelled role is
+underlined as you type, `thickness` is offered as a number, and the legal role
+and material keys autocomplete with their descriptions — instead of finding out
+after the import. The schema is kept honest by a test: every shipped library
+validates against it, and the four mistakes a person actually makes
+(`"reviewed": "false"`, a misspelled layer key, a misspelled material, a 1 mm
+skin) are each caught by it. The schema is a `.json` file, so `languages()` has
+to exclude it explicitly — it is not a library.
 
 **Import and export** (Extensions ▸ Import/Export wall types…). The exported
 file *is* a library file — same shape, same validator — so what comes out can be

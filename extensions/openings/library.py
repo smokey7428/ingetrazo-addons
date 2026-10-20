@@ -170,7 +170,11 @@ def languages() -> tuple[str, ...]:
     wall for.
     """
     if "languages" not in _cache:
-        found = {path.stem for path in DATA.glob("*.json")} - {"labels"}
+        # Everything in the folder is a library except the words and the
+        # schema — the schema is a .json because editors want one, not because
+        # it holds walls.
+        found = {path.stem for path in DATA.glob("*.json")} - {"labels",
+                                                              "walls.schema"}
         for entry in _user_raw().get("walls") or ():
             if isinstance(entry, dict) and str(entry.get("locale") or "").strip():
                 found.add(str(entry["locale"]).strip())
@@ -512,6 +516,18 @@ def export_library(path, locale: str | None = None,
            "country": document.get("country") or "",
            "note": EXPORT_NOTE,
            "walls": entries}
+    # A library file that points at a schema is a library file an editor can
+    # check while a person types. The schema travels with the export, so the
+    # folder can be handed to somebody else and still validate.
+    schema = DATA / "walls.schema.json"
+    if schema.is_file():
+        out = dict({"$schema": "./walls.schema.json"}, **out)
+        target = Path(path)
+        try:
+            (target.parent / "walls.schema.json").write_bytes(
+                schema.read_bytes())
+        except OSError:
+            pass                      # the library is what matters
     written = _write(Path(path), out)
     return {"walls": len(entries), "path": str(written), "locale": code}
 

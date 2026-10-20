@@ -497,6 +497,101 @@ def test_import_export(library, walls) -> None:
     equal(library.problems(), [], "and pointing back at nothing is quiet")
 
 
+def test_schema(library) -> None:
+    """The JSON Schema an editing user's editor checks against.
+
+    It ships beside the libraries, it is *not* a library, and it has to agree
+    with the tables: a role the editor offers but ``labels.json`` does not have
+    is a wall the import will refuse.
+    """
+    path = library.DATA / "walls.schema.json"
+    check(path.is_file(), "the schema ships with the libraries")
+    schema = __import__("json").loads(path.read_text(encoding="utf-8"))
+    equal(schema["$schema"], "https://json-schema.org/draft/2020-12/schema",
+          "as a draft 2020-12 schema")
+    check("walls.schema" not in library.languages(),
+          "and is not mistaken for a library")
+
+    skin = schema["$defs"]["skin"]
+    equal(sorted(skin["properties"]["role"]["enum"]),
+          sorted(library.labels()["roles"]),
+          "every role the labels know is offered, and no other")
+    equal(sorted(skin["properties"]["material"]["enum"]),
+          sorted(library.labels()["materials"]),
+          "and every material")
+    equal(len(skin["properties"]["role"]["enumDescriptions"]),
+          len(skin["properties"]["role"]["enum"]),
+          "each role described, so the editor can explain it")
+    equal(len(skin["properties"]["material"]["enumDescriptions"]),
+          len(skin["properties"]["material"]["enum"]),
+          "and each material")
+
+    # The limits the loader enforces, so the editor refuses what the import
+    # would, while the person is typing rather than after.
+    thickness = skin["properties"]["thickness"]
+    close(thickness["minimum"], library.MIN_SKIN * 1000.0,
+          "the thinnest skin is the loader's")
+    close(thickness["maximum"], library.MAX_SKIN * 1000.0,
+          "and the thickest")
+    equal(schema["$defs"]["wall"]["properties"]["skins"]["maxItems"],
+          library.MAX_SKINS, "and as many skins as the geometry builds")
+
+    equal(skin["additionalProperties"], False,
+          "a misspelled key in a layer is flagged, not ignored")
+    equal(schema["$defs"]["wall"]["additionalProperties"], False,
+          "and in a wall")
+    equal(schema["$defs"]["wall"]["properties"]["reviewed"]["type"], "boolean",
+          "reviewed is a boolean, because the string \"false\" is not false")
+
+    # With a validator present, prove the schema is *right*, not merely there:
+    # every shipped library validates, and the four mistakes a person actually
+    # makes are each caught. jsonschema is dev-only, like ifcopenshell — the
+    # check skips without it.
+    try:
+        import jsonschema
+    except ImportError:
+        check(True, "jsonschema is not installed, so the schema is unchecked "
+                    "here (pip install jsonschema to check it)")
+    else:
+        validator = jsonschema.Draft202012Validator(schema)
+        for code in library.languages():
+            document = __import__("json").loads(
+                (library.DATA / f"{code}.json").read_text(encoding="utf-8"))
+            found = list(validator.iter_errors(document))
+            equal(found, [], f"{code} validates against the schema")
+
+        broken = __import__("json").loads(
+            (library.DATA / "nl.json").read_text(encoding="utf-8"))
+        broken["walls"][0]["reviewed"] = "false"
+        broken["walls"][0]["skins"][0]["thicknes"] = 100
+        broken["walls"][0]["skins"][1]["material"] = "Insulaton"
+        broken["walls"][1]["skins"][0]["thickness"] = 1
+        caught = {"/".join(str(part) for part in error.path)
+                  for error in validator.iter_errors(broken)}
+        for where, what in (("walls/0/reviewed", "a reviewed flag as a string"),
+                            ("walls/0/skins/0", "a misspelled layer key"),
+                            ("walls/0/skins/1/material", "a misspelled material"),
+                            ("walls/1/skins/0/thickness", "a thickness below 3 mm")):
+            check(where in caught, f"the schema catches {what} ({where})")
+
+    # An export is a folder a person can be handed: library and schema.
+    room = Path(__file__).resolve().parent / "_schema_check"
+    room.mkdir(exist_ok=True)
+    try:
+        library.export_library(room / "walls.json", "nl")
+        written = __import__("json").loads(
+            (room / "walls.json").read_text(encoding="utf-8"))
+        equal(written.get("$schema"), "./walls.schema.json",
+              "the export points at the schema beside it")
+        check((room / "walls.schema.json").is_file(),
+              "and the schema travels with it, so the folder validates "
+              "wherever it is opened")
+    finally:
+        for leftover in room.iterdir():
+            leftover.unlink()
+        room.rmdir()
+
+
 def test_broken_file_is_reported(library) -> None:
     """A bad entry is a problem to report, never an exception in a panel."""
     library.reset()
@@ -550,6 +645,7 @@ def main() -> int:
     test_search(library)
     test_profiles_bridge(library, profiles)
     test_fresh_wall(library, walls)
+    test_schema(library)
     test_import_export(library, walls)
     test_broken_file_is_reported(library)
 
