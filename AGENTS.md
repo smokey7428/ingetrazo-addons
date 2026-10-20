@@ -34,9 +34,18 @@ section below.
 | `ifc_editor` | **IFC data — read and edit.** Every attribute of a tagged element (driven by the schema tables, all 776 IFC4 entities) and every property set, in a tray panel that follows the selection. **Export IFC (full)** writes an `.ifc` carrying all of it — validated against ifcopenshell 0.9.0.post1, 0 schema messages. |
 | `openings` | **Walls, doors and windows.** Multi-skin walls drawn along a polyline (mitred, Dutch build-ups), parametric doors and windows **hosted in them as data** (change the window → the hole follows; erase it → the wall closes), the plan symbol + Plan/Elevation/3D scenes, and a **Take-off** panel per skin. |
 
-**Published** — repo `smokey7428/ingetrazo-addons` (public), tags
-`ifc_editor-v1.0` and `openings-v1.1` with the zips attached, and catalog PR
-**ingelibre/ingetrazo-extensions#101**.
+**Published** — repo `smokey7428/ingetrazo-addons` (public). Catalogue: PR
+**ingelibre/ingetrazo-extensions#101** was merged, and the entries publish
+themselves from there (the account in `author_url`, touching only its own ficha),
+so a new version is a PR that merges within a minute:
+
+| Extension | In the catalogue | Tag | Notes |
+| --- | --- | --- | --- |
+| `ifc_editor` | **1.1** | `ifc_editor-v1.1` | PR #131, merged — IFC2X3 export and the table fix |
+| `openings` | 1.1 | `openings-v1.1` | **behind master on purpose**: the wall library waits for a person to go through the walls |
+
+Everything since those tags is on `master` and in no release yet: the wall
+library, the picker, import/export with its schema, the menu split.
 
 A maintainer reviewed both in **IngeTrazo 0.5.9**: `ifc_editor` passed
 everything; `openings` had one broken menu entry (below), fixed in 1.1.
@@ -55,10 +64,12 @@ git tag openings-v1.0 && git push --tags   # the catalog pins to a TAG, never a 
 gh release create openings-v1.0 dist/openings-1.0.zip -t "…" -n "…"
 ```
 
-`dev/release.py` keeps a **version per entry** (`VERSIONS`): a fix to one
-extension must not force a new tag and a new hash on the other, or reviewers
-read code that did not change. Bumping `openings` to 1.1 left
-`ifc_editor-1.0.zip` byte-identical, hash and all.
+`dev/release.py` keeps a **version per entry** (`VERSIONS`) and now takes the
+entries to release: `python3 dev/release.py ifc_editor`. Both halves matter. A
+version that has not changed must keep the hash it was published with — and an
+unchanged *version* can sit on a changed *source*, which is how the openings
+entry was rewritten with a hash for a file nobody had released. Releasing one
+extension no longer touches the other's entry.
 
 The zips are built with **fixed timestamps and permissions**, so the same source
 gives the same bytes and the same SHA-256 — a release whose hash moves on every
