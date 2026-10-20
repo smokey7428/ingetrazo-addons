@@ -398,10 +398,13 @@ def main() -> int:
 
     # Search reads every language, which is the point of the label table.
     walls_panel._search.setText("cavity")
-    equal(walls_panel._type.count(), 2,
-          "\"cavity\" finds the two Dutch cavity walls, in English")
+    english = walls_panel._type.count()
+    check(0 < english < len(library.walls("nl")),
+          f"\"cavity\" narrows the Dutch library to {english} of "
+          f"{len(library.walls('nl'))} walls, in English")
     walls_panel._search.setText("spouwmuur")
-    equal(walls_panel._type.count(), 2, "and \"spouwmuur\" finds the same two")
+    equal(walls_panel._type.count(), len(library.search("nl", "spouwmuur")),
+          "and \"spouwmuur\" finds what the library says it finds")
     walls_panel._search.setText("zzz")
     equal(walls_panel._type.count(), 0, "nonsense finds nothing")
     walls_panel._search.setText("")

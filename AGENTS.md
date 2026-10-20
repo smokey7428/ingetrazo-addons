@@ -431,17 +431,17 @@ its symbol behind — hence a "Refresh plan symbols" command.
 | `walls.py`, `wall_geometry.py`, `wall_object.py`, `wall_tool.py`, `wall_panel.py` | **A wall of our own**: skins along a polyline, mitred, regenerated from its parameters — so the wall keeps being a wall. The **Walls** panel configures the build-up and **Draw a wall** draws it. |
 | `profiles.py` | **The Dutch standards**, in one place: timber sections (kozijnhout 67 × 114, raamhout 54 × 67), glazing (hr++ 20 mm), and the window and door types with their sizes and Dutch names. Adding a type later is a line of data here, not a change to the geometry. Wall build-ups are **not** here any more — they are data, below. |
 | `library.py` | **The wall library**: reads `data/walls/<locale>.json`, converts millimetres to metres at one boundary, and answers the questions the rest of the extension asks — a role's label in the user's language, a material's density, which role a stored skin name means, and which walls match a search in *any* of the five languages. Pure: no Qt, no scene. |
-| `data/walls/` | `labels.json` (14 roles and 15 materials, five languages, densities and IFC names) and one file per country. Thicknesses are **millimetres** here and metres everywhere else. |
+| `data/walls/` | `labels.json` (14 roles and 16 materials, five languages, densities and IFC names) and one file per country. Thicknesses are **millimetres** here and metres everywhere else. |
 | `__init__.py` | `setup(app)`: panel, tool, its own submenu, a right-click entry and the Browser's Type column. |
 
 Coordinates: **x** along the wall (0 at the left jamb), **y** into the wall
 (0 on the clicked face), **z** up (0 on the floor).
 
-Tests: **786 checks** in `test_openings_library.py` (the data: every wall's
+Tests: **2438 checks** in `test_openings_library.py` (the data: every wall's
 roles and materials resolve in all five languages, the units change in one
 place, a stored "Buitenblad" recovers its role, nothing drafted is sold as
 reviewed, and an export→edit→import round trip changes nothing it should not),
-plus **685** across `test_openings_geometry.py`, `test_openings_object.py`,
+plus **557** across `test_openings_geometry.py`, `test_openings_object.py`,
 `test_openings_panel.py` and `test_openings_walls.py`. They prove
 each part is a closed solid with a **positive volume** — the same test
 `core/bim.py` uses before it will report a volume — that the volumes match the
@@ -559,8 +559,10 @@ our walls it takes the hosted path, otherwise the freeform cut.
 
 A wall type is **data**, not code: one JSON file per country in
 `extensions/openings/data/walls/`, and `labels.json` with the words beside them.
-`nl` (6 walls, 2 reviewed) and `en-GB` (20 walls, all drafts) ship; `de`,
-`es-ES` and `es-PE` are next. A sixth library is a new file and nothing else —
+**Five libraries, ten external and ten internal walls each**, 100 in all:
+`nl` (2 reviewed, the two that already shipped), `en-GB`, `de`, `es-ES` and
+`es-PE` (all drafts, each with the practice it came from). A sixth library is a
+new file and nothing else —
 `library.languages()` reports any `*.json` it finds.
 
 * **A layer stores a role, not a name**: `outer_leaf`, not `"Buitenblad"`. The

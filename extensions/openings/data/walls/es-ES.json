@@ -1,0 +1,261 @@
+{
+  "locale": "es-ES",
+  "country": "España",
+  "note": "Spanish wall build-ups (España). Thicknesses are millimetres, listed from the outside in. `reviewed: true` means a person has signed the entry off; every entry here is a draft from Spanish practice and must be checked before anyone builds from it. Performance fields are present and deliberately empty: this extension does not compute or claim a U-value.",
+
+  "walls": [
+    {
+      "key": "es-ES.fachada-ladrillo.115-40-70",
+      "kind": "exterior",
+      "name": {"es-ES": "Fábrica de dos hojas 115-40-70", "en-GB": "Two-leaf brick wall 115-40-70"},
+      "source": "Draft: the fábrica de dos hojas Spanish practice is built on — a perforated brick outer leaf, an air chamber, and a hollow-brick inner leaf. The chamber is where the insulation usually goes next.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "outer_leaf", "thickness": 115, "material": "Brick"},
+        {"role": "cavity", "thickness": 40, "material": "Air"},
+        {"role": "inner_leaf", "thickness": 70, "material": "ClayBlock"}
+      ]
+    },
+    {
+      "key": "es-ES.fachada-ladrillo.115-60-70",
+      "kind": "exterior",
+      "name": {"es-ES": "Fábrica de dos hojas aislada 115-60-70", "en-GB": "Insulated two-leaf wall 115-60-70"},
+      "source": "Draft: the same two leaves with the chamber filled — what the CTE's DB-HE asks for, and what most new housing in Spain actually details.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "outer_leaf", "thickness": 115, "material": "Brick"},
+        {"role": "insulation", "thickness": 60, "material": "Insulation"},
+        {"role": "inner_leaf", "thickness": 70, "material": "ClayBlock"}
+      ]
+    },
+    {
+      "key": "es-ES.fachada-ladrillo.115-40-115",
+      "kind": "exterior",
+      "name": {"es-ES": "Fábrica de dos hojas 115-40-115", "en-GB": "Two-leaf brick wall 115-40-115"},
+      "source": "Draft: two perforated-brick leaves of the same thickness — the wall where the inner leaf also carries or takes a fixing, rather than a hollow brick.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "outer_leaf", "thickness": 115, "material": "Brick"},
+        {"role": "cavity", "thickness": 40, "material": "Air"},
+        {"role": "inner_leaf", "thickness": 115, "material": "Brick"}
+      ]
+    },
+    {
+      "key": "es-ES.fachada-ventilada.30-50-60-115",
+      "kind": "exterior",
+      "name": {"es-ES": "Fachada ventilada 30-50-60-115", "en-GB": "Ventilated facade 30-50-60-115"},
+      "source": "Draft: a stone-clad ventilated facade — the cladding, a drained and ventilated chamber, insulation on the brick, and the brick itself.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "cladding", "thickness": 30, "material": "Stone"},
+        {"role": "cavity", "thickness": 50, "material": "Air"},
+        {"role": "insulation", "thickness": 60, "material": "Insulation"},
+        {"role": "structure", "thickness": 115, "material": "Brick"}
+      ]
+    },
+    {
+      "key": "es-ES.sate-ladrillo.15-80-115",
+      "kind": "exterior",
+      "name": {"es-ES": "SATE sobre ladrillo 15-80-115", "en-GB": "External insulation on brick 15-80-115"},
+      "source": "Draft: an external insulation system over a brick wall — the retrofit answer for a 1960s or 70s block, and increasingly the new-build one.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "insulation", "thickness": 80, "material": "EPS"},
+        {"role": "structure", "thickness": 115, "material": "Brick"}
+      ]
+    },
+    {
+      "key": "es-ES.sate-bloque.15-60-200",
+      "kind": "exterior",
+      "name": {"es-ES": "SATE sobre bloque 15-60-200", "en-GB": "External insulation on block 15-60-200"},
+      "source": "Draft: the same system over a 200 mm concrete-block wall, which is what a great many Spanish facades are behind the render.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "insulation", "thickness": 60, "material": "EPS"},
+        {"role": "structure", "thickness": 200, "material": "Block"}
+      ]
+    },
+    {
+      "key": "es-ES.termoarcilla.15-290-15",
+      "kind": "exterior",
+      "name": {"es-ES": "Muro de termoarcilla 15-290-15", "en-GB": "Termoarcilla wall 15-290-15"},
+      "source": "Draft: the monolithic answer — a single 290 mm thermo-clay block, rendered both sides, with no separate insulation layer.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "structure", "thickness": 290, "material": "ClayBlock"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "es-ES.hormigon-sate.15-100-200",
+      "kind": "exterior",
+      "name": {"es-ES": "Hormigón con aislamiento exterior 15-100-200", "en-GB": "Concrete wall with external insulation 15-100-200"},
+      "source": "Draft: a 200 mm concrete wall insulated on the outside, finished in render — the wall of the block of flats, and its retrofit.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "insulation", "thickness": 100, "material": "EPS"},
+        {"role": "structure", "thickness": 200, "material": "Concrete"}
+      ]
+    },
+    {
+      "key": "es-ES.bloque-trasdosado.10-140-40-70",
+      "kind": "exterior",
+      "name": {"es-ES": "Bloque con trasdosado 10-140-40-70", "en-GB": "Block wall with lining 10-140-40-70"},
+      "source": "Draft: a block wall with the insulation inside and a hollow-brick lining over it — the way a wall is upgraded from within, where the facade cannot be touched.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 10, "material": "Render"},
+        {"role": "structure", "thickness": 140, "material": "Block"},
+        {"role": "insulation", "thickness": 40, "material": "Insulation"},
+        {"role": "inner_leaf", "thickness": 70, "material": "ClayBlock"}
+      ]
+    },
+    {
+      "key": "es-ES.hormigon-visto.200",
+      "kind": "exterior",
+      "name": {"es-ES": "Muro de hormigón visto 200", "en-GB": "Fair-faced concrete wall 200"},
+      "source": "Draft: exposed concrete, 200 mm, no insulation and no finish. Modelled as it is, not as it should be — a wall to check before it becomes somebody's standard.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "structure", "thickness": 200, "material": "Concrete"}
+      ]
+    },
+
+    {
+      "key": "es-ES.tabique-hueco-doble.70",
+      "kind": "interior",
+      "name": {"es-ES": "Tabique de hueco doble 70", "en-GB": "Hollow brick partition 70"},
+      "source": "Draft: the 70 mm hollow-brick partition every Spanish plan is drawn with.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 70, "material": "ClayBlock"}
+      ]
+    },
+    {
+      "key": "es-ES.tabique-hueco-sencillo.45",
+      "kind": "interior",
+      "name": {"es-ES": "Tabique de hueco sencillo 45", "en-GB": "Thin hollow brick partition 45"},
+      "source": "Draft: the 45 mm partition — the thinnest brick wall that still stands, and the one that hides a wardrobe or a shaft.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 45, "material": "ClayBlock"}
+      ]
+    },
+    {
+      "key": "es-ES.tabique-doble-aislado.70-30-70",
+      "kind": "interior",
+      "name": {"es-ES": "Tabique doble aislado 70-30-70", "en-GB": "Insulated double partition 70-30-70"},
+      "source": "Draft: two hollow-brick leaves with 30 mm of insulation between them — the acoustic partition between a bedroom and a living room.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 70, "material": "ClayBlock"},
+        {"role": "insulation", "thickness": 30, "material": "Insulation"},
+        {"role": "inner_leaf", "thickness": 70, "material": "ClayBlock"}
+      ]
+    },
+    {
+      "key": "es-ES.tabique-yeso.12.5-46-12.5",
+      "kind": "interior",
+      "name": {"es-ES": "Tabique de placa de yeso 46", "en-GB": "Plasterboard partition 46"},
+      "source": "Draft: a plasterboard partition on metal studs — what a Spanish office fit-out is made of, and much of a new flat's division.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "The 46 mm zone is counted as air: the metal studs are not modelled, so only the boards and the void count.",
+      "skins": [
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"},
+        {"role": "service_void", "thickness": 46, "material": "Air"},
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "es-ES.tabique-yeso-aislado.12.5-70-12.5",
+      "kind": "interior",
+      "name": {"es-ES": "Tabique de yeso aislado 70", "en-GB": "Insulated plasterboard partition 70"},
+      "source": "Draft: the same partition with the stud cavity filled — the wall between two rooms that have to stay quiet.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "Counted as insulation, so the studs' mass is missing; the acoustic performance belongs to the specification, not to this stack.",
+      "skins": [
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"},
+        {"role": "insulation", "thickness": 70, "material": "Insulation"},
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "es-ES.tabique-yeso-doble.25-46-25",
+      "kind": "interior",
+      "name": {"es-ES": "Tabique de yeso doble 46", "en-GB": "Double-boarded partition 46"},
+      "source": "Draft: two boards either side of the studs, which is how a plasterboard partition reaches a fire rating a single board does not.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "The 46 mm zone is counted as air; the studs are not modelled.",
+      "skins": [
+        {"role": "finish", "thickness": 25, "material": "Gypsum"},
+        {"role": "service_void", "thickness": 46, "material": "Air"},
+        {"role": "finish", "thickness": 25, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "es-ES.tabicon-bloque.90",
+      "kind": "interior",
+      "name": {"es-ES": "Tabicón de bloque 90", "en-GB": "Concrete block partition 90"},
+      "source": "Draft: a 90 mm concrete-block partition — heavier than hollow brick, and the one that takes a shelf without a fixing.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 90, "material": "Block"}
+      ]
+    },
+    {
+      "key": "es-ES.muro-ladrillo.115",
+      "kind": "interior",
+      "name": {"es-ES": "Muro de ladrillo 115", "en-GB": "Brick wall 115"},
+      "source": "Draft: a half-brick internal wall — what older Spanish housing has where a modern plan would show a partition.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "structure", "thickness": 115, "material": "Brick"}
+      ]
+    },
+    {
+      "key": "es-ES.muro-hormigon.150",
+      "kind": "interior",
+      "name": {"es-ES": "Muro de hormigón 150", "en-GB": "Concrete wall 150"},
+      "source": "Draft: a 150 mm concrete wall — a shaft, a stair core, or the flank wall the plan is arranged around.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "structure", "thickness": 150, "material": "Concrete"}
+      ]
+    },
+    {
+      "key": "es-ES.tabique-yeso-sobre-ladrillo.70-12.5",
+      "kind": "interior",
+      "name": {"es-ES": "Tabique con trasdosado de yeso 70-12.5", "en-GB": "Brick partition with plasterboard 70-12.5"},
+      "source": "Draft: a hollow-brick partition lined with plasterboard on one face — how the wall usually ends up looking, and how its thickness usually gets quoted.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 70, "material": "ClayBlock"},
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"}
+      ]
+    }
+  ]
+}

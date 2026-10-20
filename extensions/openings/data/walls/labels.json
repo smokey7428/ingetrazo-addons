@@ -32,6 +32,8 @@
     "EPS":          {"density": 25.0,   "ifc": "EPS",             "labels": {"nl": "Polystyreen (EPS)", "en-GB": "EPS",                "de": "Polystyrol (EPS)",  "es-ES": "Poliestireno (EPS)",      "es-PE": "Poliestireno (EPS)"}},
     "PIR":          {"density": 32.0,   "ifc": "PIR",             "labels": {"nl": "PIR-schuim",        "en-GB": "PIR",                "de": "PIR-Schaum",        "es-ES": "Espuma PIR",              "es-PE": "Espuma PIR"}},
     "Gypsum":       {"density": 800.0,  "ifc": "Gypsum board",    "labels": {"nl": "Gipsplaat",         "en-GB": "Plasterboard",       "de": "Gipsplatte",        "es-ES": "Placa de yeso",           "es-PE": "Placa de yeso"}},
-    "Render":       {"density": 1800.0, "ifc": "Cement render",   "labels": {"nl": "Stucwerk",          "en-GB": "Render",             "de": "Putz",              "es-ES": "Mortero",                 "es-PE": "Mortero"}}
+    "Render":       {"density": 1800.0, "ifc": "Cement render",   "labels": {"nl": "Stucwerk",          "en-GB": "Render",             "de": "Putz",              "es-ES": "Mortero",                 "es-PE": "Mortero"}},
+    "Adobe":        {"density": 1600.0, "ifc": "Adobe",           "labels": {"nl": "Adobes",           "en-GB": "Adobe",             "de": "Lehm",             "es-ES": "Adobe",                   "es-PE": "Adobe"}},
+    "Stone":        {"density": 2500.0, "ifc": "Stone",           "labels": {"nl": "Natuursteen",      "en-GB": "Stone",             "de": "Naturstein",       "es-ES": "Piedra natural",          "es-PE": "Piedra"}}
   }
 }

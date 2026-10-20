@@ -119,8 +119,10 @@ def test_every_wall(library) -> None:
                       f"{key}: skin {index + 1} has a material we can name")
                 check(library.material_density(skin["material"]) is not None,
                       f"{key}: skin {index + 1}'s material has a density")
-            check(total > 0.05, f"{key}: is a wall, not a sheet "
-                               f"({total * 1000:.0f} mm)")
+            # 30 mm, not 50: a tabique de hueco sencillo is 45 mm and is a
+            # wall somebody builds — thin is not the same as not a wall.
+            check(total >= 0.030, f"{key}: is a wall, not a sheet "
+                                  f"({total * 1000:.0f} mm)")
             # The words, in every language, so nothing shows blank.
             for language in LANGUAGES:
                 check(bool(library.wall_name(entry, language)),
@@ -240,15 +242,16 @@ def test_report(library) -> None:
 
 
 def test_search(library) -> None:
-    equal(len(library.search("nl", "spouwmuur")), 2,
-          "\"spouwmuur\" finds both cavity walls")
-    found = library.search("nl", "cavity")
-    check(len(found) == 2, "and \"cavity\" finds the same two, in English")
+    dutch = {entry["key"] for entry in library.search("nl", "spouwmuur")}
+    check(len(dutch) >= 3, f"\"spouwmuur\" finds the cavity walls: {sorted(dutch)}")
+    check(dutch <= {entry["key"] for entry in library.search("nl", "cavity")},
+          "and English finds at least the same ones — the search reads every "
+          "language at once")
     check(all(e["kind"] == "exterior"
               for e in library.search("nl", "", kind="exterior")),
           "a kind filter keeps to that kind")
     equal(library.search("nl", "zzz"), [], "and nothing matches nonsense")
-    check(len(library.search("nl", "spouwmuur 120")) == 1,
+    check(len(library.search("nl", "spouwmuur 140")) == 1,
           "two words narrow it to one")
 
 
@@ -320,7 +323,8 @@ def test_import_export(library, walls) -> None:
 
         # Importing what we just exported changes nothing and says nothing.
         back = library.import_library(out)
-        equal([back["imported"], back["updated"], back["unchanged"]], [0, 0, 6],
+        equal([back["imported"], back["updated"], back["unchanged"]],
+              [0, 0, len(shipped)],
               "walls that already say this are not copied into the user's file")
         equal(back["problems"], [], "and nothing is wrong with them")
         library.reset()

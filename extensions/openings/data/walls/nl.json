@@ -45,11 +45,60 @@
         "nl": "Spouwmuur 100-120-100",
         "en-GB": "Cavity wall 100-120-100"
       },
-      "source": "Draft from current Dutch housing practice: a masonry outer leaf, a fully filled cavity, and a block inner leaf. To be checked against the BRG standard details and the Rc the Bouwbesluit asks for before it is marked reviewed.",
+      "source": "Draft from current Dutch housing practice: a masonry outer leaf, a fully filled cavity, and a block inner leaf. To be checked against the BRG standard details before it is marked reviewed.",
       "checked": "2026-10-20",
       "reviewed": false,
       "skins": [
         {"role": "outer_leaf", "thickness": 100, "material": "Brick"},
+        {"role": "insulation", "thickness": 120, "material": "Insulation"},
+        {"role": "inner_leaf", "thickness": 100, "material": "Block"}
+      ]
+    },
+    {
+      "key": "nl.spouwmuur.100-140-100",
+      "kind": "exterior",
+      "name": {
+        "nl": "Spouwmuur 100-140-100",
+        "en-GB": "Cavity wall 100-140-100"
+      },
+      "source": "Draft: the cavity with 140 mm of fill, the step above 120 where a mineral-wool fill reaches further. The other thickness Dutch housing is actually built in.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "outer_leaf", "thickness": 100, "material": "Brick"},
+        {"role": "insulation", "thickness": 140, "material": "Insulation"},
+        {"role": "inner_leaf", "thickness": 100, "material": "Block"}
+      ]
+    },
+    {
+      "key": "nl.spouwmuur.kalkzandsteen.100-120-120",
+      "kind": "exterior",
+      "name": {
+        "nl": "Spouwmuur met kalkzandsteen 100-120-120",
+        "en-GB": "Cavity wall with calcium silicate 100-120-120"
+      },
+      "source": "Draft: the same cavity with a calcium-silicate inner leaf instead of block, which is what a binnenspouwblad often is — heavier, and it takes a fixing.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "outer_leaf", "thickness": 100, "material": "Brick"},
+        {"role": "insulation", "thickness": 120, "material": "Insulation"},
+        {"role": "inner_leaf", "thickness": 120, "material": "LimeSandStone"}
+      ]
+    },
+    {
+      "key": "nl.gestuct.15-100-120-100",
+      "kind": "exterior",
+      "name": {
+        "nl": "Gestucte spouwmuur 15-100-120-100",
+        "en-GB": "Rendered cavity wall 15-100-120-100"
+      },
+      "source": "Draft: a cavity wall whose outer leaf is calcium silicate finished with stuc — the flat, painted street facade rather than brick.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "outer_leaf", "thickness": 100, "material": "LimeSandStone"},
         {"role": "insulation", "thickness": 120, "material": "Insulation"},
         {"role": "inner_leaf", "thickness": 100, "material": "Block"}
       ]
@@ -75,17 +124,116 @@
       ]
     },
     {
+      "key": "nl.houtskeletbouw.steenstrips.20-25-18-145-12",
+      "kind": "exterior",
+      "name": {
+        "nl": "Houtskeletbouw met steenstrips",
+        "en-GB": "Timber frame with brick slips"
+      },
+      "source": "Draft: a timber frame wearing brick slips — the masonry look on a frame, which is how a growing share of Dutch new-build is finished.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "The stud zone is counted as insulation, so the frame's mass is missing from the take-off.",
+      "skins": [
+        {"role": "masonry_veneer", "thickness": 20, "material": "Brick"},
+        {"role": "cavity", "thickness": 25, "material": "Air"},
+        {"role": "sheathing", "thickness": 18, "material": "Timber"},
+        {"role": "insulation", "thickness": 145, "material": "Insulation"},
+        {"role": "finish", "thickness": 12, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "nl.houtskeletbouw.gevelbekleding.20-25-18-140-12",
+      "kind": "exterior",
+      "name": {
+        "nl": "Houtskeletbouw met houten gevelbekleding",
+        "en-GB": "Timber frame with timber cladding"
+      },
+      "source": "Draft: the same frame with a timber rainscreen — cladding, a drained cavity, sheathing, the stud zone and a board.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "The stud zone is counted as insulation, so the frame's mass is missing from the take-off.",
+      "skins": [
+        {"role": "cladding", "thickness": 20, "material": "Timber"},
+        {"role": "cavity", "thickness": 25, "material": "Air"},
+        {"role": "sheathing", "thickness": 18, "material": "Timber"},
+        {"role": "insulation", "thickness": 140, "material": "Insulation"},
+        {"role": "finish", "thickness": 12, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "nl.prefab-beton.150-100-50",
+      "kind": "exterior",
+      "name": {
+        "nl": "Prefab betonnen gevelelement 150-100-50",
+        "en-GB": "Precast concrete facade 150-100-50"
+      },
+      "source": "Draft: a precast sandwich element — a structural inner shell, insulation, and a thin outer shell. The wall of a great deal of Dutch high-rise and of the tunnel-built terraces.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "structure", "thickness": 150, "material": "Concrete"},
+        {"role": "insulation", "thickness": 100, "material": "EPS"},
+        {"role": "structure", "thickness": 50, "material": "Concrete"}
+      ]
+    },
+    {
+      "key": "nl.beton-buitengevelisolatie.10-100-200",
+      "kind": "exterior",
+      "name": {
+        "nl": "Betonwand met buitengevelisolatie 10-100-200",
+        "en-GB": "Concrete wall with external insulation 10-100-200"
+      },
+      "source": "Draft: a cast in-situ concrete wall insulated on the outside — how a portiekflat is brought up to a current standard without touching the inside of anybody's home.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 10, "material": "Render"},
+        {"role": "insulation", "thickness": 100, "material": "EPS"},
+        {"role": "structure", "thickness": 200, "material": "Concrete"}
+      ]
+    },
+
+    {
       "key": "nl.kalkzandsteen.100",
       "kind": "interior",
       "name": {
         "nl": "Kalkzandsteenwand 100",
         "en-GB": "Calcium-silicate wall 100"
       },
-      "source": "Draft: a 100 mm calcium-silicate block partition, the common Dutch non-loadbearing inner wall. To be checked against the block's actual format and the finish it gets on site.",
+      "source": "Draft: a 100 mm calcium-silicate block partition, the common Dutch non-loadbearing inner wall.",
       "checked": "2026-10-20",
       "reviewed": false,
       "skins": [
         {"role": "inner_leaf", "thickness": 100, "material": "LimeSandStone"}
+      ]
+    },
+    {
+      "key": "nl.kalkzandsteen.120",
+      "kind": "interior",
+      "name": {
+        "nl": "Kalkzandsteenwand 120",
+        "en-GB": "Calcium-silicate wall 120"
+      },
+      "source": "Draft: the 120 mm calcium-silicate partition — one block thicker, where a wall has to reach a fire or acoustic line a 100 cannot.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 120, "material": "LimeSandStone"}
+      ]
+    },
+    {
+      "key": "nl.kalkzandsteen.150",
+      "kind": "interior",
+      "name": {
+        "nl": "Kalkzandsteenwand 150",
+        "en-GB": "Calcium-silicate wall 150"
+      },
+      "source": "Draft: a 150 mm calcium-silicate wall, used where the partition carries as well as divides.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 150, "material": "LimeSandStone"}
       ]
     },
     {
@@ -100,6 +248,85 @@
       "reviewed": false,
       "skins": [
         {"role": "structure", "thickness": 200, "material": "LimeSandStone"}
+      ]
+    },
+    {
+      "key": "nl.woningscheidend.spouw.100-50-100",
+      "kind": "interior",
+      "name": {
+        "nl": "Woningscheidende wand met spouw 100-50-100",
+        "en-GB": "Cavity party wall 100-50-100"
+      },
+      "source": "Draft: two calcium-silicate leaves with a 50 mm cavity — the other way a separating wall is built, and the one that leaves a service zone between the dwellings.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 100, "material": "LimeSandStone"},
+        {"role": "cavity", "thickness": 50, "material": "Air"},
+        {"role": "inner_leaf", "thickness": 100, "material": "LimeSandStone"}
+      ]
+    },
+    {
+      "key": "nl.gips-regelwerk.12.5-75-12.5",
+      "kind": "interior",
+      "name": {
+        "nl": "Gipswand op regelwerk 75",
+        "en-GB": "Stud partition 75"
+      },
+      "source": "Draft: a metal-stud partition boarded both sides — the light division of Dutch offices and of a growing share of housing.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "The 75 mm zone is counted as air: the studs are not modelled, so only the boards and the void count.",
+      "skins": [
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"},
+        {"role": "service_void", "thickness": 75, "material": "Air"},
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "nl.dubbele-gipswand.12.5-50-12.5",
+      "kind": "interior",
+      "name": {
+        "nl": "Dubbele gipswand 12.5-50-12.5",
+        "en-GB": "Double boarded partition 50"
+      },
+      "source": "Draft: two boards either side of a narrow frame — the thinnest wall that still keeps two rooms apart.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "The 50 mm zone is counted as air; the frame is not modelled.",
+      "skins": [
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"},
+        {"role": "service_void", "thickness": 50, "material": "Air"},
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "nl.gips-op-kalkzandsteen.100-12.5",
+      "kind": "interior",
+      "name": {
+        "nl": "Kalkzandsteen met gipsplaat 100-12.5",
+        "en-GB": "Calcium silicate with plasterboard 100-12.5"
+      },
+      "source": "Draft: a calcium-silicate wall with a board on one face — how the wall usually ends up looking, and how its thickness usually gets quoted.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 100, "material": "LimeSandStone"},
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "nl.beton.200",
+      "kind": "interior",
+      "name": {
+        "nl": "Betonwand 200",
+        "en-GB": "Concrete wall 200"
+      },
+      "source": "Draft: a 200 mm concrete core or flank wall — the structure the rest of the plan is arranged around.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "structure", "thickness": 200, "material": "Concrete"}
       ]
     }
   ]

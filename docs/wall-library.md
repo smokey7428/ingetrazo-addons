@@ -1,8 +1,10 @@
 # A wall library: five countries, five languages — the plan
 
-Status: **P1 is built** — `library.py`, `labels.json`, `nl.json` (6 walls, 2
-reviewed), the picker, import and export, 786 checks. **P2 is half drafted**:
-`en-GB.json` has its 20 walls, all drafts. `de`, `es-ES` and `es-PE` are next.
+Status: **P1 and P2 are done.** Five libraries — `nl`, `en-GB`, `de`, `es-ES`,
+`es-PE` — ten external and ten internal walls each, 100 in all. The two Dutch
+walls that already shipped are `reviewed`; the other 98 are drafts, each with the
+practice it came from, for a person to sign off. The picker, import and export
+are built; 2660 checks cover the data alone.
 
 ## Goal
 

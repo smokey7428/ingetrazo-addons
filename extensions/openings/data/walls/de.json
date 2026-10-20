@@ -1,0 +1,264 @@
+{
+  "locale": "de",
+  "country": "Deutschland",
+  "note": "German wall build-ups. Thicknesses are millimetres, listed from the outside in. `reviewed: true` means a person has signed the entry off; every entry here is a draft from German practice and must be checked before anyone builds from it. Performance fields are present and deliberately empty: this extension does not compute or claim a U-value.",
+
+  "walls": [
+    {
+      "key": "de.zweischalig.klinker.115-40-140-175",
+      "kind": "exterior",
+      "name": {"de": "Zweischalige Wand mit Klinker 115-40-140-175", "en-GB": "Cavity wall with clinker 115-40-140-175"},
+      "source": "Draft: the zweischalige Wand most German housing is built with — a clinker facing shell, a ventilated air layer, insulation, and a calcium-silicate inner leaf.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "masonry_veneer", "thickness": 115, "material": "Brick"},
+        {"role": "cavity", "thickness": 40, "material": "Air"},
+        {"role": "insulation", "thickness": 140, "material": "Insulation"},
+        {"role": "inner_leaf", "thickness": 175, "material": "LimeSandStone"}
+      ]
+    },
+    {
+      "key": "de.zweischalig.klinker.115-40-180-175",
+      "kind": "exterior",
+      "name": {"de": "Zweischalige Wand mit Klinker 115-40-180-175", "en-GB": "Cavity wall with clinker 115-40-180-175"},
+      "source": "Draft: the same shell with 180 mm of insulation — the thickness the GEG has pushed the standard detail towards.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "masonry_veneer", "thickness": 115, "material": "Brick"},
+        {"role": "cavity", "thickness": 40, "material": "Air"},
+        {"role": "insulation", "thickness": 180, "material": "Insulation"},
+        {"role": "inner_leaf", "thickness": 175, "material": "LimeSandStone"}
+      ]
+    },
+    {
+      "key": "de.wdvs.kalksandstein.15-140-175",
+      "kind": "exterior",
+      "name": {"de": "WDVS auf Kalksandstein 15-140-175", "en-GB": "External insulation on calcium silicate 15-140-175"},
+      "source": "Draft: a composite thermal insulation system on a calcium-silicate wall — the single most common German external wall where the facade is not clinker.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "insulation", "thickness": 140, "material": "EPS"},
+        {"role": "structure", "thickness": 175, "material": "LimeSandStone"}
+      ]
+    },
+    {
+      "key": "de.wdvs.porenbeton.15-120-240",
+      "kind": "exterior",
+      "name": {"de": "WDVS auf Porenbeton 15-120-240", "en-GB": "External insulation on aerated concrete 15-120-240"},
+      "source": "Draft: the same system over a 240 mm aerated-concrete wall, which carries and insulates a little itself.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "insulation", "thickness": 120, "material": "EPS"},
+        {"role": "structure", "thickness": 240, "material": "AAC"}
+      ]
+    },
+    {
+      "key": "de.monolithisch.porenbeton.15-365-15",
+      "kind": "exterior",
+      "name": {"de": "Monolithische Porenbetonwand 15-365-15", "en-GB": "Monolithic aerated concrete wall 15-365-15"},
+      "source": "Draft: a single-leaf aerated-concrete wall, plastered both sides — no insulation layer at all, because the block is the insulation. The wall that made the Einfamilienhaus cheap.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "structure", "thickness": 365, "material": "AAC"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "de.monolithisch.ziegel.15-365-15",
+      "kind": "exterior",
+      "name": {"de": "Monolithische Ziegelwand 15-365-15", "en-GB": "Monolithic clay block wall 15-365-15"},
+      "source": "Draft: the monolithic fired-clay answer to the same question — a highly perforated block, plastered both sides.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "structure", "thickness": 365, "material": "ClayBlock"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "de.stahlbeton.wdvs.15-160-200",
+      "kind": "exterior",
+      "name": {"de": "Stahlbetonwand mit WDVS 15-160-200", "en-GB": "Concrete wall with external insulation 15-160-200"},
+      "source": "Draft: a 200 mm concrete wall with 160 mm of insulation outside — the wall of the Mehrfamilienhaus, and the retrofit of a 1970s one.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "insulation", "thickness": 160, "material": "EPS"},
+        {"role": "structure", "thickness": 200, "material": "Concrete"}
+      ]
+    },
+    {
+      "key": "de.holzrahmen.20-30-18-200-12.5",
+      "kind": "exterior",
+      "name": {"de": "Holzrahmenbau 20-30-18-200-12.5", "en-GB": "Timber frame 20-30-18-200-12.5"},
+      "source": "Draft: a German timber-frame external wall — timber cladding, a ventilated layer, a wood-fibre board, a deep insulated stud zone and a plasterboard lining.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "The 200 mm stud zone is counted as insulation, so the frame's mass is the insulation's. A vapour barrier is thinner than a skin may be and is part of the build-up, not a layer.",
+      "skins": [
+        {"role": "cladding", "thickness": 20, "material": "Timber"},
+        {"role": "cavity", "thickness": 30, "material": "Air"},
+        {"role": "sheathing", "thickness": 18, "material": "Timber"},
+        {"role": "insulation", "thickness": 200, "material": "Insulation"},
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "de.zweischalig.porenbeton.115-40-120-240",
+      "kind": "exterior",
+      "name": {"de": "Zweischalige Wand mit Porenbeton 115-40-120-240", "en-GB": "Cavity wall with aerated concrete 115-40-120-240"},
+      "source": "Draft: a clinker shell in front of an aerated-concrete inner leaf — the two systems in one wall, which is what a plot with a brick facade and a masonry core actually gets.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "masonry_veneer", "thickness": 115, "material": "Brick"},
+        {"role": "cavity", "thickness": 40, "material": "Air"},
+        {"role": "insulation", "thickness": 120, "material": "Insulation"},
+        {"role": "structure", "thickness": 240, "material": "AAC"}
+      ]
+    },
+    {
+      "key": "de.plattenbau.70-120-140",
+      "kind": "exterior",
+      "name": {"de": "Plattenbau-Außenwand 70-120-140", "en-GB": "Precast panel wall 70-120-140"},
+      "source": "Draft: the three-layer precast panel of the East German Plattenbau — a thin outer shell, insulation, and a structural inner shell. Included because a great many German flats are this wall.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "structure", "thickness": 70, "material": "Concrete"},
+        {"role": "insulation", "thickness": 120, "material": "EPS"},
+        {"role": "structure", "thickness": 140, "material": "Concrete"}
+      ]
+    },
+
+    {
+      "key": "de.kalksandstein.100",
+      "kind": "interior",
+      "name": {"de": "Kalksandsteinwand 100", "en-GB": "Calcium-silicate wall 100"},
+      "source": "Draft: a 100 mm calcium-silicate partition, the standard non-loadbearing wall of German domestic work.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 100, "material": "LimeSandStone"}
+      ]
+    },
+    {
+      "key": "de.kalksandstein.115",
+      "kind": "interior",
+      "name": {"de": "Kalksandsteinwand 115", "en-GB": "Calcium-silicate wall 115"},
+      "source": "Draft: the 115 mm partition — one block wider, for a wall that has to meet a fire line.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 115, "material": "LimeSandStone"}
+      ]
+    },
+    {
+      "key": "de.kalksandstein.175",
+      "kind": "interior",
+      "name": {"de": "Wohnungstrennwand 175", "en-GB": "Party wall 175"},
+      "source": "Draft: a 175 mm calcium-silicate separating wall between dwellings. What it has to meet acoustically and in fire is a requirement, not a property of this stack.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "structure", "thickness": 175, "material": "LimeSandStone"}
+      ]
+    },
+    {
+      "key": "de.kalksandstein.240",
+      "kind": "interior",
+      "name": {"de": "Tragende Wohnungstrennwand 240", "en-GB": "Loadbearing party wall 240"},
+      "source": "Draft: a 240 mm calcium-silicate wall that divides dwellings and carries the floor above — common in masonry apartment buildings.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "structure", "thickness": 240, "material": "LimeSandStone"}
+      ]
+    },
+    {
+      "key": "de.staenderwand.12.5-75-12.5",
+      "kind": "interior",
+      "name": {"de": "Metallständerwand 75", "en-GB": "Metal stud partition 75"},
+      "source": "Draft: a metal-stud partition boarded both sides — the light division of German offices and of a growing share of housing.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "The 75 mm zone is counted as air: the studs are not modelled, so only the boards and the void count.",
+      "skins": [
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"},
+        {"role": "service_void", "thickness": 75, "material": "Air"},
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "de.staenderwand.gedaemmt.12.5-75-12.5",
+      "kind": "interior",
+      "name": {"de": "Gedämmte Metallständerwand 75", "en-GB": "Insulated metal stud partition 75"},
+      "source": "Draft: the same partition with the cavity filled — the wall between a bathroom and a bedroom, or between two flats.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "Counted as insulation, so the frame's mass is missing; the acoustic performance is a matter for the specification, not for this stack.",
+      "skins": [
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"},
+        {"role": "insulation", "thickness": 75, "material": "Insulation"},
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "de.staenderwand.zweilagig.25-75-25",
+      "kind": "interior",
+      "name": {"de": "Doppelt beplankte Ständerwand 75", "en-GB": "Double boarded stud partition 75"},
+      "source": "Draft: two boards either side of the studs, which is how a partition reaches a fire rating a single board does not.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "The 75 mm zone is counted as air; the frame is not modelled.",
+      "skins": [
+        {"role": "finish", "thickness": 25, "material": "Gypsum"},
+        {"role": "service_void", "thickness": 75, "material": "Air"},
+        {"role": "finish", "thickness": 25, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "de.stahlbeton.200",
+      "kind": "interior",
+      "name": {"de": "Stahlbetonwand 200", "en-GB": "Concrete wall 200"},
+      "source": "Draft: a 200 mm concrete core or flank wall — the structure the rest of the plan is arranged around.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "structure", "thickness": 200, "material": "Concrete"}
+      ]
+    },
+    {
+      "key": "de.ziegel.115",
+      "kind": "interior",
+      "name": {"de": "Ziegelwand 115", "en-GB": "Clay block wall 115"},
+      "source": "Draft: a 115 mm clay-block wall, which is what a great deal of older housing has where a modern drawing would show calcium silicate.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 115, "material": "ClayBlock"}
+      ]
+    },
+    {
+      "key": "de.porenbeton.100",
+      "kind": "interior",
+      "name": {"de": "Porenbetonwand 100", "en-GB": "Aerated concrete wall 100"},
+      "source": "Draft: a 100 mm aerated-concrete partition — light to handle, easy to chase, and common in self-built housing.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 100, "material": "AAC"}
+      ]
+    }
+  ]
+}

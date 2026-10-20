@@ -1,0 +1,268 @@
+{
+  "locale": "es-PE",
+  "country": "Perú",
+  "note": "Peruvian wall build-ups. Thicknesses are millimetres, listed from the outside in. `reviewed: true` means a person has signed the entry off; every entry here is a draft from Peruvian practice and must be checked before anyone builds from it. Performance fields are present and deliberately empty: this extension does not compute or claim a U-value.",
+
+  "walls": [
+    {
+      "key": "es-PE.albanileria-soga.15-130-15",
+      "kind": "exterior",
+      "name": {"es-PE": "Albañilería de soga 130", "en-GB": "Masonry wall, soga 130"},
+      "source": "Draft: the wall most Peruvian housing is built with — a 130 mm brick laid soga, tarrajeo both faces. The confined masonry of the RNE E.070 is this wall plus its columns.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "structure", "thickness": 130, "material": "Brick"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "es-PE.albanileria-cabeza.15-240-15",
+      "kind": "exterior",
+      "name": {"es-PE": "Albañilería de cabeza 240", "en-GB": "Masonry wall, cabeza 240"},
+      "source": "Draft: the same brick laid cabeza — 240 mm, one brick long. Used where the wall carries more, or where a soga wall would not be stable enough.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "structure", "thickness": 240, "material": "Brick"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "es-PE.bloque.15-150-15",
+      "kind": "exterior",
+      "name": {"es-PE": "Muro de bloque de concreto 150", "en-GB": "Concrete block wall 150"},
+      "source": "Draft: a 150 mm concrete-block wall, tarrajeado both sides — the alternative to brick where the block is cheaper or the brick is not available.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "structure", "thickness": 150, "material": "Block"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "es-PE.concreto.15-200-15",
+      "kind": "exterior",
+      "name": {"es-PE": "Muro de concreto armado 200", "en-GB": "Reinforced concrete wall 200"},
+      "source": "Draft: a 200 mm reinforced-concrete wall, tarrajeado both sides — the shear wall of a framed building, and the whole wall of many others.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "structure", "thickness": 200, "material": "Concrete"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "es-PE.bloque-caravista.150-15",
+      "kind": "exterior",
+      "name": {"es-PE": "Muro de bloque caravista 150", "en-GB": "Fair-faced block wall 150"},
+      "source": "Draft: block left fair-faced outside and tarrajeado inside — very common where the facade is not painted, and cheaper than rendering both sides.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "structure", "thickness": 150, "material": "Block"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "es-PE.concreto-caravista.200-15",
+      "kind": "exterior",
+      "name": {"es-PE": "Concreto caravista 200", "en-GB": "Fair-faced concrete wall 200"},
+      "source": "Draft: exposed concrete outside, plastered inside — the finish a great many Peruvian apartment buildings present to the street.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "structure", "thickness": 200, "material": "Concrete"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "es-PE.adobe.15-400-15",
+      "kind": "exterior",
+      "name": {"es-PE": "Muro de adobe 400", "en-GB": "Adobe wall 400"},
+      "source": "Draft: a 400 mm adobe wall, tarrajeado both sides — the wall of a very large share of rural Peru, and still the one people ask to model.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "Adobe is heavy and weak in bending: what it needs structurally is a matter for the RNE E.080, not for this stack.",
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "structure", "thickness": 400, "material": "Adobe"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "es-PE.sillar.15-500-15",
+      "kind": "exterior",
+      "name": {"es-PE": "Muro de sillar 500", "en-GB": "Sillar wall 500"},
+      "source": "Draft: the dressed volcanic stone of Arequipa — a 500 mm sillar wall, tarrajeado both sides. Regional, and the only honest way to model that city's housing.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "structure", "thickness": 500, "material": "Stone"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "es-PE.soga-aislada.15-130-50-15",
+      "kind": "exterior",
+      "name": {"es-PE": "Albañilería de soga aislada 130-50", "en-GB": "Insulated masonry wall, soga 130-50"},
+      "source": "Draft: the same soga wall with 50 mm of insulation inside — the upgrade for the highlands and for a coast that is hot rather than cold. Rare today, and specified more often every year.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "structure", "thickness": 130, "material": "Brick"},
+        {"role": "insulation", "thickness": 50, "material": "Insulation"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "es-PE.soga-caravista.130-15",
+      "kind": "exterior",
+      "name": {"es-PE": "Albañilería de soga caravista 130", "en-GB": "Fair-faced masonry wall, soga 130"},
+      "source": "Draft: soga brick left exposed outside and tarrajeado inside — the wall of a house that shows its brick.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "structure", "thickness": 130, "material": "Brick"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+
+    {
+      "key": "es-PE.tabique-soga.15-130-15",
+      "kind": "interior",
+      "name": {"es-PE": "Tabique de soga 130", "en-GB": "Interior masonry wall, soga 130"},
+      "source": "Draft: an interior wall of soga brick, tarrajeado both sides — the division of a house built in masonry throughout.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "inner_leaf", "thickness": 130, "material": "Brick"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "es-PE.tabique-pastelero.15-90-15",
+      "kind": "interior",
+      "name": {"es-PE": "Tabique de ladrillo pastelero 90", "en-GB": "Clay tile partition 90"},
+      "source": "Draft: a 90 mm ladrillo pastelero partition, tarrajeado both sides — the cheap masonry division of Peruvian housing.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "inner_leaf", "thickness": 90, "material": "Brick"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "es-PE.tabique-bloque.15-100-15",
+      "kind": "interior",
+      "name": {"es-PE": "Tabique de bloque 100", "en-GB": "Block partition 100"},
+      "source": "Draft: a 100 mm concrete-block partition, tarrajeado both sides.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "inner_leaf", "thickness": 100, "material": "Block"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "es-PE.drywall.12.5-90-12.5",
+      "kind": "interior",
+      "name": {"es-PE": "Tabique drywall 90", "en-GB": "Drywall partition 90"},
+      "source": "Draft: a plasterboard partition on metal studs — what a modern Peruvian apartment fit-out is made of.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "The 90 mm zone is counted as air: the metal studs are not modelled, so only the boards and the void count.",
+      "skins": [
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"},
+        {"role": "service_void", "thickness": 90, "material": "Air"},
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "es-PE.drywall-aislado.12.5-90-12.5",
+      "kind": "interior",
+      "name": {"es-PE": "Drywall aislado 90", "en-GB": "Insulated drywall partition 90"},
+      "source": "Draft: the same partition with the cavity filled — the wall between two bedrooms, or between a flat and a lift shaft.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "Counted as insulation, so the studs' mass is missing; the acoustic performance belongs to the specification.",
+      "skins": [
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"},
+        {"role": "insulation", "thickness": 90, "material": "Insulation"},
+        {"role": "finish", "thickness": 12.5, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "es-PE.drywall-doble.25-90-25",
+      "kind": "interior",
+      "name": {"es-PE": "Drywall doble placa 90", "en-GB": "Double-boarded drywall partition 90"},
+      "source": "Draft: two boards either side of the studs, which is how a plasterboard partition reaches a fire rating a single board does not.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "note": "The 90 mm zone is counted as air; the studs are not modelled.",
+      "skins": [
+        {"role": "finish", "thickness": 25, "material": "Gypsum"},
+        {"role": "service_void", "thickness": 90, "material": "Air"},
+        {"role": "finish", "thickness": 25, "material": "Gypsum"}
+      ]
+    },
+    {
+      "key": "es-PE.muro-concreto.15-150-15",
+      "kind": "interior",
+      "name": {"es-PE": "Muro de concreto 150", "en-GB": "Concrete wall 150"},
+      "source": "Draft: a 150 mm concrete wall tarrajeado both sides — a shaft, a stair core, or the wall between two apartments.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "render", "thickness": 15, "material": "Render"},
+        {"role": "structure", "thickness": 150, "material": "Concrete"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "es-PE.muro-concreto-caravista.150-15",
+      "kind": "interior",
+      "name": {"es-PE": "Concreto caravista interior 150", "en-GB": "Fair-faced concrete wall, inside 150"},
+      "source": "Draft: concrete left exposed on one face indoors — the wall an architect leaves alone, tarrajeado on the other side.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "structure", "thickness": 150, "material": "Concrete"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "es-PE.tabique-bloque-caravista.100-15",
+      "kind": "interior",
+      "name": {"es-PE": "Tabique de bloque caravista 100", "en-GB": "Fair-faced block partition 100"},
+      "source": "Draft: block left exposed on one face and tarrajeado on the other — the cheap partition of a house that does not pretend.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 100, "material": "Block"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    },
+    {
+      "key": "es-PE.tabique-soga-caravista.130-15",
+      "kind": "interior",
+      "name": {"es-PE": "Tabique de soga caravista 130", "en-GB": "Fair-faced masonry partition, soga 130"},
+      "source": "Draft: soga brick exposed on one face indoors — how a lot of Peruvian interiors actually look.",
+      "checked": "2026-10-20",
+      "reviewed": false,
+      "skins": [
+        {"role": "inner_leaf", "thickness": 130, "material": "Brick"},
+        {"role": "plaster", "thickness": 15, "material": "Render"}
+      ]
+    }
+  ]
+}
