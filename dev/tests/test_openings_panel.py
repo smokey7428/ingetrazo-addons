@@ -17,6 +17,7 @@ Usage:  python3 dev/tests/test_openings_panel.py
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 import types
 from pathlib import Path
@@ -204,7 +205,15 @@ class FakeQtGui:
 
 
 def load(name: str):
+    """One module per extension file, as in the app.
+
+    Reloading a module here would give the panel and the test separate copies,
+    and separate caches: the panel would keep showing the library it loaded
+    before the test changed it, and the test would be checking the other one.
+    """
     full = f"ingetrazo_plugin_openings.{name}"
+    if full in sys.modules:
+        return sys.modules[full]
     spec = importlib.util.spec_from_file_location(full, EXT / f"{name}.py")
     module = importlib.util.module_from_spec(spec)
     sys.modules[full] = module
@@ -347,6 +356,106 @@ def main() -> int:
     check(panel._tool is not None, "and the panel can reach it")
     extension._raise_panel()
     equal(app.shown, app.panels["Openings"], "the menu entry brings the panel up")
+
+    # ---- the wall library, in the Walls panel ----
+    # Five languages for the words, whatever libraries exist for the walls: a
+    # Dutch build-up read by an English user is still read in English.
+    walls_panel = app.panels["Walls"].widget
+    library = load("library")
+    equal(walls_panel.library_code(), "nl",
+          "the panel offers the Dutch library, the one that ships")
+    equal(walls_panel.language_code(), "en-GB",
+          "and names it in the app's language, which is English")
+    equal(walls_panel._language_box.count(), 5,
+          "every language we have words for is offered")
+    equal(walls_panel._library_box.count(), len(library.languages()),
+          "and every library we have walls for")
+
+    equal(walls_panel._type.count(), len(library.walls("nl")),
+          "the picker lists the whole library, not a combo of two")
+    first = walls_panel._type.itemText(0)
+    for bit in ("300 mm", "3 layers", "reviewed"):
+        check(bit in first, f"a type says what it is: {first!r} misses {bit!r}")
+    check("draft" in walls_panel._type.itemText(2),
+          "and a draft says so")
+
+    # Picking one fills the panel with that build-up.
+    index = walls_panel._type.findData("nl.kalkzandsteen.100")
+    check(index >= 0, "the picker knows the calcium-silicate wall")
+    walls_panel._type.setCurrentIndex(index)
+    walls_panel._type.currentIndexChanged.emit(index)
+    equal([skin["role"] for skin in walls_panel.draft()["skins"]],
+          ["inner_leaf"], "and choosing it takes its skins")
+
+    # Search reads every language, which is the point of the label table.
+    walls_panel._search.setText("cavity")
+    equal(walls_panel._type.count(), 2,
+          "\"cavity\" finds the two Dutch cavity walls, in English")
+    walls_panel._search.setText("spouwmuur")
+    equal(walls_panel._type.count(), 2, "and \"spouwmuur\" finds the same two")
+    walls_panel._search.setText("zzz")
+    equal(walls_panel._type.count(), 0, "nonsense finds nothing")
+    walls_panel._search.setText("")
+    equal(walls_panel._type.count(), len(library.walls("nl")),
+          "clearing the search brings them all back")
+
+    # A language change renames what is on screen, and writes nothing.
+    cavity = walls_panel._type.findData("nl.spouwmuur.100-100-100")
+    walls_panel._type.setCurrentIndex(cavity)
+    walls_panel._type.currentIndexChanged.emit(cavity)
+    before = [group.name for group in scene.groups]
+    german = walls_panel._language_box.findData("de")
+    walls_panel._language_box.setCurrentIndex(german)
+    walls_panel._language_box.currentIndexChanged.emit(german)
+    equal(walls_panel.language_code(), "de", "the panel is in German now")
+    names = [walls_panel._type.itemText(i)
+             for i in range(walls_panel._type.count())]
+    check(any("Zweischalige Wand" in name for name in names),
+          f"and the walls are named in German: {names[:2]}")
+    label = walls_panel._skin_rows[0][0].text()
+    equal(label, "Außenschale", "the cavity wall's outer leaf, in German")
+    equal(walls_panel._skin_rows[0][0].isReadOnly(), True,
+          "and a role's name is a translation, not a field to type in")
+    equal([group.name for group in scene.groups], before,
+          "changing the language changed no geometry")
+    english = walls_panel._language_box.findData("en-GB")
+    walls_panel._language_box.setCurrentIndex(english)
+    walls_panel._language_box.currentIndexChanged.emit(english)
+    equal(walls_panel._skin_rows[0][0].text(), "Outer leaf", "and back")
+
+    # ---- a type imported while the app is running is drawable at once ----
+    import shutil
+    import tempfile
+    room = Path(tempfile.mkdtemp(prefix="ingetrazo-walls-panel-"))
+    keep = library.USER_HOME
+    library.USER_HOME = room
+    try:
+        mine = {"locale": "nl", "walls": [{
+            "key": "nl.kantoor.100",
+            "kind": "interior",
+            "name": {"nl": "Kantoorwand 100", "en-GB": "Office wall 100"},
+            "skins": [{"role": "inner_leaf", "thickness": 100,
+                       "material": "Gypsum"}]}]}
+        path = room / "office.json"
+        path.write_text(json.dumps(mine), encoding="utf-8")
+        result = library.import_library(path)
+        equal(result["imported"], 1, "the office wall is imported")
+        walls_panel.reload_types()
+        equal(walls_panel._type.count(), len(library.walls("nl")),
+              "the picker shows it without a restart")
+        index = walls_panel._type.findData("nl.kantoor.100")
+        check(index >= 0, "under its own key")
+        walls_panel._type.setCurrentIndex(index)
+        walls_panel._type.currentIndexChanged.emit(index)
+        equal([skin["material"] for skin in walls_panel.draft()["skins"]],
+              ["Gypsum"], "and it is what the next wall would be drawn with")
+    finally:
+        library.USER_HOME = keep
+        library.reset()
+        shutil.rmtree(room, ignore_errors=True)
+    walls_panel.reload_types()
+    equal(walls_panel._type.findData("nl.kantoor.100"), -1,
+          "and once the file is gone, so is the wall")
 
     # ---- nothing selected: the panel is the next door's settings ----
     panel.refresh()

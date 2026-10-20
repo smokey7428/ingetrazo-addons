@@ -49,6 +49,17 @@ _TEXTS = {
         "Erase door": "Eliminar la puerta",
         "Make plan / elevation / 3D": "Crear planta / alzado / 3D",
         "Redraw the swing symbols": "Redibujar los símbolos de barrido",
+        "Export wall types…": "Exportar tipos de muro…",
+        "Import wall types…": "Importar tipos de muro…",
+        "Wall library (*.json)": "Biblioteca de muros (*.json)",
+        "The file could not be written: {e}": "No se pudo escribir el archivo: {e}",
+        "That file could not be read: {e}": "No se pudo leer ese archivo: {e}",
+        "Wall types": "Tipos de muro",
+        "Not imported:": "No importados:",
+        "{new} new, {updated} updated, {known} already known.":
+            "{new} nuevos, {updated} actualizados, {known} ya conocidos.",
+        "{n} wall type(s) written to {path}":
+            "{n} tipos de muro escritos en {path}",
         "Plan, elevation and 3D scenes, showing the door symbols where they "
         "belong.":
             "Escenas de planta, alzado y 3D, con los símbolos de las puertas "
@@ -153,6 +164,11 @@ def setup(app) -> None:
         sub.addAction(_t("Edit…"), lambda: app.show_panel(dock))
         sub.addAction(_t("Erase"), panel._on_erase)
         sub.addSeparator()
+        sub.addAction(_t("Export wall types…"),
+                      lambda: _export_walls(app, walls_panel))
+        sub.addAction(_t("Import wall types…"),
+                      lambda: _import_walls(app, walls_panel))
+        sub.addSeparator()
         sub.addAction(_t("Make plan / elevation / 3D"),
                       lambda: scenes.make(app.viewport,
                                           params_mod.SYMBOL_LAYER))
@@ -170,6 +186,80 @@ def _scenes_refresh(app) -> None:
     if count:
         app.viewport.flash_status(
             _t("Swing symbols redrawn for {n} door(s).", n=count), 4000)
+
+
+def _export_walls(app, panel) -> None:
+    """Write the chosen library — the walls that ship and the user's own — to a
+    file a person can read, edit and hand to a colleague.
+
+    No undo step: this writes the extension's own library, not the document.
+    """
+    from pathlib import Path
+
+    from PySide6.QtWidgets import QFileDialog
+
+    from . import library
+
+    code = panel.library_code()
+    suggested = str(Path.home() / f"wall-types-{code}.json")
+    path, _filter = QFileDialog.getSaveFileName(
+        app.window, _t("Export wall types…"), suggested,
+        _t("Wall library (*.json)"))
+    if not path:
+        return
+    try:
+        result = library.export_library(path, code)
+    except OSError as failure:
+        _say(app, _t("The file could not be written: {e}", e=failure), True)
+        return
+    app.viewport.flash_status(
+        _t("{n} wall type(s) written to {path}", n=result["walls"],
+           path=result["path"]), 5000)
+
+
+def _import_walls(app, panel) -> None:
+    """Take wall types from a file, and say what could not be read.
+
+    The import is the **validator**: a wall is written to the user's own file
+    only if it is clean, and everything doubtful is reported here rather than
+    quietly disappearing into a panel nobody can explain.
+    """
+    from pathlib import Path
+
+    from PySide6.QtWidgets import QFileDialog
+
+    from . import library
+
+    path, _filter = QFileDialog.getOpenFileName(
+        app.window, _t("Import wall types…"), str(Path.home()),
+        _t("Wall library (*.json)"))
+    if not path:
+        return
+    try:
+        result = library.import_library(path, panel.library_code())
+    except (OSError, ValueError) as failure:
+        _say(app, _t("That file could not be read: {e}", e=failure), True)
+        return
+    panel.reload_types()
+    summary = _t("{new} new, {updated} updated, {known} already known.",
+                 new=result["imported"], updated=result["updated"],
+                 known=result["unchanged"])
+    if result["problems"]:
+        _say(app, summary + "\n\n" + _t("Not imported:") + "\n"
+             + "\n".join(f"· {problem}" for problem in result["problems"][:20]),
+             True)
+    else:
+        app.viewport.flash_status(summary, 6000)
+
+
+def _say(app, text: str, warn: bool = False) -> None:
+    from PySide6.QtWidgets import QMessageBox
+
+    message = QMessageBox(app.window)
+    message.setIcon(QMessageBox.WARNING if warn else QMessageBox.INFORMATION)
+    message.setWindowTitle(_t("Wall types"))
+    message.setText(text)
+    message.exec()
 
 
 def _context_menu(menu, selection) -> None:

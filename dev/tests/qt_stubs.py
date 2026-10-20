@@ -159,6 +159,14 @@ class QLineEdit(QWidget):
     def setPlaceholderText(self, text: str) -> None:
         self._placeholder = text
 
+    def setReadOnly(self, on: bool) -> None:
+        # Real Qt has this, and a stub without it hid a whole feature: a layer's
+        # name is read-only when the layer has a role.
+        self._read_only = bool(on)
+
+    def isReadOnly(self) -> bool:
+        return bool(getattr(self, "_read_only", False))
+
     def hasFocus(self) -> bool:
         return False
 
@@ -512,6 +520,53 @@ class QSettings:
         QSettings._values[key] = value
 
 
+class QFileDialog:
+    """Cancelled, always.
+
+    A test that opened a real dialog would hang the run, and the import and
+    export themselves are covered headlessly in ``test_openings_library.py``.
+    What matters here is that a menu entry *reaches* the dialog without
+    raising — the check that caught a ``NameError`` in this very extension.
+    """
+
+    @staticmethod
+    def getSaveFileName(*_args, **_kwargs):
+        return ("", "")
+
+    @staticmethod
+    def getOpenFileName(*_args, **_kwargs):
+        return ("", "")
+
+
+class QMessageBox(QWidget):
+    """A box that is never shown: it records what it would have said."""
+
+    INFORMATION = "information"
+    WARNING = "warning"
+    last: "QMessageBox | None" = None
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self._title = ""
+        self._text = ""
+        QMessageBox.last = self
+
+    def setIcon(self, _icon) -> None:
+        pass
+
+    def setWindowTitle(self, title: str) -> None:
+        self._title = title
+
+    def setText(self, text: str) -> None:
+        self._text = text
+
+    def text(self) -> str:
+        return self._text
+
+    def exec(self) -> int:
+        return 0
+
+
 def install() -> None:
     """Register the stub modules. Call before importing anything that uses Qt."""
     qtcore = types.ModuleType("PySide6.QtCore")
@@ -529,6 +584,8 @@ def install() -> None:
                         ("QDialog", QDialog), ("QInputDialog", QInputDialog),
                         ("QDialogButtonBox", QDialogButtonBox),
                         ("QScrollArea", QScrollArea),
+                        ("QFileDialog", QFileDialog),
+                        ("QMessageBox", QMessageBox),
                         ("QDoubleSpinBox", QDoubleSpinBox),
                         ("QSpinBox", QSpinBox),
                         ("QVBoxLayout", QVBoxLayout),

@@ -143,6 +143,12 @@ def test_model() -> None:
           "the wall survives a JSON round trip unchanged")
 
     # Validation says what is wrong, in words.
+    check(any("two points" in problem
+              for problem in walls.validate(walls.defaults())),
+          "a placed wall needs a path")
+    check(not walls.validate(walls.defaults(), placed=False),
+          "a build-up waiting to be drawn does not — that was the bug that")
+    check(True, "made every type picked in the panel do nothing")
     empty = walls.normalize({"skins": [{"name": "x", "thickness": 0}]})
     check(walls.validate(empty), "a wall of skins with no thickness is refused")
     no_path = walls.normalize({})

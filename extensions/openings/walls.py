@@ -36,6 +36,32 @@ KIND = "wall"
 
 KINDS = tuple(profiles.WALLS)
 
+
+def kinds(locale: str | None = None) -> tuple[str, ...]:
+    """Every build-up a wall can be drawn from, in the library's order.
+
+    Asked each time rather than frozen at import, because a user can **import**
+    a wall type while the app is running and expect to draw with it.
+    """
+    found = tuple(library.profile_key(entry) for entry in library.walls(locale))
+    return found or KINDS
+
+
+def known(name: str | None, locale: str | None = None) -> bool:
+    """Whether a build-up of this name exists — ours, or the user's own."""
+    if not name:
+        return False
+    if name in profiles.WALLS:
+        return True
+    return library.wall(name, locale) is not None
+
+
+def default_type(locale: str | None = None) -> str:
+    """The first build-up of the library, which is what a wall with no type and
+    an unreadable one both land on."""
+    found = kinds(locale)
+    return found[0] if found else "spouwmuur"
+
 #: Bounds that keep a wall a wall: metres.
 LIMITS = {
     "height": (0.30, 12.00),
@@ -56,7 +82,7 @@ def defaults(name: str | None = None, language: str | None = None) -> dict:
     in Dutch whatever the interface is set to, and the panel translates the role
     for display. Omitting it takes the library's own language.
     """
-    return _from_profile(name if name in profiles.WALLS else KINDS[0], language)
+    return _from_profile(name if known(name) else default_type(), language)
 
 
 def _from_profile(name: str, language: str | None = None) -> dict:
@@ -80,7 +106,8 @@ def _from_profile(name: str, language: str | None = None) -> dict:
     return {
         "kind": KIND,
         "type": name,
-        "height": float(profiles.WALLS[name]["height"]),
+        "height": float(profiles.WALLS.get(name, {}).get("height",
+                                                         library.DEFAULT_HEIGHT)),
         "base": 0.0,
         "path": [],                       # [(x, y), …] in plan, metres
         "skins": skins,
@@ -111,7 +138,7 @@ def normalize(raw: dict | None) -> dict:
     because one number went bad is worse than a wall at 2.7 m.
     """
     raw = dict(raw or {})
-    name = raw.get("type") if raw.get("type") in profiles.WALLS else KINDS[0]
+    name = raw.get("type") if known(raw.get("type")) else default_type()
     out = _from_profile(name)
 
     for key in ("height", "base"):
@@ -241,10 +268,15 @@ def describe(w: dict) -> str:
             f"{'s' if skins != 1 else ''}")
 
 
-def validate(w: dict) -> list[str]:
-    """What is wrong with this wall, in plain words."""
+def validate(w: dict, placed: bool = True) -> list[str]:
+    """What is wrong with this wall, in plain words.
+
+    ``placed=False`` is a build-up that has not been drawn yet: a wall in the
+    panel waiting for the tool has no path, and asking it for one meant the
+    type picker refused every change it was given.
+    """
     problems: list[str] = []
-    if len(w["path"]) < 2:
+    if placed and len(w["path"]) < 2:
         problems.append("A wall needs at least two points along its path.")
     if not w["skins"]:
         problems.append("A wall needs at least one skin.")

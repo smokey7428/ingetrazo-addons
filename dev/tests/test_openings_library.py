@@ -289,6 +289,138 @@ def test_fresh_wall(library, walls) -> None:
     close(walls.total_thickness(other), 0.100, "at its own thickness")
 
 
+def test_import_export(library, walls) -> None:
+    """A wall type that can leave the app and come back.
+
+    The exported file *is* a library file, so there is one format, one
+    validator, and what comes out can be dropped beside the shipped libraries
+    as it stands.
+    """
+    import shutil
+    import tempfile
+
+    room = Path(tempfile.mkdtemp(prefix="ingetrazo-walls-"))
+    keep = library.USER_HOME
+    library.USER_HOME = room
+    try:
+        library.reset()
+        shipped = library.walls("nl")
+        out = room / "export.json"
+        result = library.export_library(out, "nl")
+        equal(result["walls"], len(shipped), "every wall of the library exports")
+        equal(result["locale"], "nl", "and the file says which library it is")
+        data = __import__("json").loads(out.read_text(encoding="utf-8"))
+        equal(data["locale"], "nl", "the file is a library file")
+        equal([w["key"] for w in data["walls"]],
+              [w["key"] for w in shipped], "with the walls in their order")
+        first = data["walls"][0]
+        equal([s["thickness"] for s in first["skins"]], [100, 100, 100],
+              "and thicknesses in millimetres, as a person reads them")
+        check("role" in first["skins"][0], "a layer says its role")
+
+        # Importing what we just exported changes nothing and says nothing.
+        back = library.import_library(out)
+        equal([back["imported"], back["updated"], back["unchanged"]], [0, 0, 6],
+              "walls that already say this are not copied into the user's file")
+        equal(back["problems"], [], "and nothing is wrong with them")
+        library.reset()
+        equal(len(library.walls("nl")), len(shipped),
+              "the library is the same size after a round trip")
+        equal(library.problems(), [], "and the user file is clean")
+
+        # A wall of one's own: clean, and it can be drawn with.
+        mine = {"locale": "nl", "walls": [{
+            "key": "nl.mijn.wand.150",
+            "kind": "interior",
+            "name": {"nl": "Mijn wand 150", "en-GB": "My wall 150"},
+            "source": "typed by hand",
+            "checked": "2026-10-20",
+            "reviewed": False,
+            "skins": [{"role": "inner_leaf", "thickness": 150,
+                       "material": "LimeSandStone"}],
+        }]}
+        own = room / "mine.json"
+        own.write_text(__import__("json").dumps(mine), encoding="utf-8")
+        added = library.import_library(own)
+        equal([added["imported"], added["updated"]], [1, 0],
+              "a new wall is added once")
+        library.reset()
+        equal(len(library.walls("nl")), len(shipped) + 1,
+              "and the library grows by one")
+        equal(library.problems(), [], "still clean")
+        entry = library.wall("nl.mijn.wand.150")
+        check(entry is not None, "the imported wall is found by its key")
+        equal(entry["mine"], True, "and is marked as the user's own")
+        equal(library.wall_name(entry, "nl"), "Mijn wand 150",
+              "with the name as typed")
+        fresh = walls.defaults("nl.mijn.wand.150")
+        equal([s["role"] for s in fresh["skins"]], ["inner_leaf"],
+              "a wall drawn from it carries the roles")
+        close(fresh["height"], 2.700, "and the panel's height")
+        check(walls.known("nl.mijn.wand.150"), "and the type is known")
+        check("nl.mijn.wand.150" in walls.kinds(),
+              "so the panel offers it without a restart")
+
+        # The user's wall replaces the shipped one of the same key: that is how
+        # an office corrects a build-up without waiting for a release.
+        better = {"locale": "nl", "walls": [{
+            "key": "nl.spouwmuur.100-100-100", "kind": "exterior",
+            "name": {"nl": "Spouwmuur 140", "en-GB": "Cavity wall 140"},
+            "skins": [{"role": "outer_leaf", "thickness": 100,
+                       "material": "Brick"},
+                      {"role": "insulation", "thickness": 140,
+                       "material": "Insulation"},
+                      {"role": "inner_leaf", "thickness": 100,
+                       "material": "Block"}],
+        }]}
+        edit = room / "better.json"
+        edit.write_text(__import__("json").dumps(better), encoding="utf-8")
+        library.import_library(edit)
+        library.reset()
+        equal(len(library.walls("nl")), len(shipped) + 1,
+              "the corrected wall replaces, it does not add")
+        close(sum(s["thickness"]
+                  for s in library.wall("spouwmuur")["skins"]), 0.340,
+              "and the correction is what the library gives")
+
+        # A wall we cannot read is refused, with the reason, and nothing is
+        # written: what lands in the user's file is read on every start.
+        broken = {"locale": "nl", "walls": [{
+            "key": "nl.kapot.1", "kind": "interior",
+            "name": {"nl": "Kapot"},
+            "skins": [{"role": "unicorn", "thickness": 150,
+                       "material": "Kaas"}],
+        }]}
+        bad = room / "broken.json"
+        bad.write_text(__import__("json").dumps(broken), encoding="utf-8")
+        refused = library.import_library(bad)
+        equal([refused["imported"], refused["skipped"]], [0, 1],
+              "a wall with an unknown role and material is not imported")
+        check(any("unicorn" in problem for problem in refused["problems"]),
+              "and it says which role it did not know")
+        library.reset()
+        equal(library.wall("nl.kapot.1"), None, "it is not in the library")
+        equal(library.problems(), [], "nor did it pollute the report")
+
+        # Something that is not a library at all.
+        other = room / "not.json"
+        other.write_text('"just a string"', encoding="utf-8")
+        raised = False
+        try:
+            library.import_library(other)
+        except ValueError:
+            raised = True
+        check(raised, "a file that is not a wall library is refused")
+
+        check(str(library.user_path()).endswith("user.json"),
+              "the user's types live in a file called user.json")
+    finally:
+        library.USER_HOME = keep
+        library.reset()
+        shutil.rmtree(room, ignore_errors=True)
+    equal(library.problems(), [], "and pointing back at nothing is quiet")
+
+
 def test_broken_file_is_reported(library) -> None:
     """A bad entry is a problem to report, never an exception in a panel."""
     library.reset()
@@ -342,6 +474,7 @@ def main() -> int:
     test_search(library)
     test_profiles_bridge(library, profiles)
     test_fresh_wall(library, walls)
+    test_import_export(library, walls)
     test_broken_file_is_reported(library)
 
     if failures:

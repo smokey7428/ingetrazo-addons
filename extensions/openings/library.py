@@ -35,6 +35,8 @@ exception in a panel.
 from __future__ import annotations
 
 import json
+import os
+import sys
 from pathlib import Path
 
 #: Where the libraries live, inside the extension.
@@ -79,6 +81,20 @@ _problems: list[str] = []
 def _remember(problem: str) -> None:
     if problem not in _problems:
         _problems.append(problem)
+
+
+def _note(sink: list | None, problem: str) -> None:
+    """Record a problem where the caller is collecting them.
+
+    Loading a shipped library reports to ``problems()``, which the tests
+    require to be empty. An **import** collects its own, because it has to show
+    them to the person who just chose the file — a wall that could not be read
+    must say so where it was asked for, not in a log nobody opens.
+    """
+    if sink is None:
+        _remember(problem)
+    else:
+        sink.append(problem)
 
 
 def problems() -> list[str]:
@@ -143,9 +159,17 @@ def chain(language: str | None) -> tuple[str, ...]:
 
 
 def languages() -> tuple[str, ...]:
-    """Which libraries are actually present, in the order to offer them."""
+    """Which libraries are actually present, in the order to offer them.
+
+    Any ``*.json`` in ``data/walls/`` is a library — that is how a sixth becomes
+    a data file and nothing else — and so is any locale the user has imported a
+    wall for.
+    """
     if "languages" not in _cache:
         found = {path.stem for path in DATA.glob("*.json")} - {"labels"}
+        for entry in _user_raw().get("walls") or ():
+            if isinstance(entry, dict) and str(entry.get("locale") or "").strip():
+                found.add(str(entry["locale"]).strip())
         ordered = [code for code in LOCALES if code in found]
         ordered += sorted(found - set(LOCALES))
         if not ordered:
@@ -244,42 +268,59 @@ def role_for(name: str) -> str | None:
 
 
 # ---- walls -----------------------------------------------------------------
+def _document(locale: str) -> dict:
+    """A library file as it was written — kept, so an export can hand back the
+    entries exactly as they came in, millimetres and all."""
+    slot = ("doc", locale)
+    if slot not in _cache:
+        _cache[slot] = _read(DATA / f"{locale}.json", {})
+    return _cache[slot]
+
+
 def walls(locale: str | None = None) -> tuple[dict, ...]:
-    """One library, every wall, thicknesses in metres."""
+    """One library, every wall, thicknesses in metres.
+
+    The user's own walls come after the shipped ones — and a wall of theirs with
+    the same key **replaces** it, which is how an office corrects a build-up
+    without waiting for a release.
+    """
     code = _locale(locale)
     slot = ("walls", code)
     if slot not in _cache:
-        raw = _read(DATA / f"{code}.json", {})
         loaded = []
-        for entry in raw.get("walls") or ():
+        for entry in _document(code).get("walls") or ():
             wall = _wall(entry, code) if isinstance(entry, dict) else None
             if wall is not None:
                 loaded.append(wall)
+        mine = _user_walls(code)
+        if mine:
+            mine_keys = {entry["key"] for entry in mine}
+            loaded = [e for e in loaded if e["key"] not in mine_keys] + list(mine)
         if not loaded:
-            _remember(f"{code}.json has no usable walls")
+            _remember(f"{code}: there are no usable walls")
         _cache[slot] = tuple(loaded)
     return _cache[slot]
 
 
-def _wall(entry: dict, locale: str) -> dict | None:
+def _wall(entry: dict, locale: str, sink: list | None = None) -> dict | None:
     """One entry from a file, checked enough to be trusted by the geometry."""
     key = str(entry.get("key") or "").strip()
     if not key.startswith(locale + "."):
-        _remember(f"{locale}.json: a wall's key should start with "
-                  f"{locale!r}, got {key!r}")
+        _note(sink, f"{locale}: a wall's key should start with {locale!r}, "
+                    f"got {key!r}")
     if not key:
-        _remember(f"{locale}.json: a wall with no key was skipped")
+        _note(sink, f"{locale}: a wall with no key was skipped")
         return None
 
     kind = entry.get("kind")
     if kind not in _KINDS:
-        _remember(f"{key}: kind should be exterior or interior, got {kind!r}")
+        _note(sink, f"{key}: kind should be exterior or interior, got {kind!r}")
         kind = _KINDS[0]
 
     names = {str(code): str(value) for code, value in
              (entry.get("names") or entry.get("name") or {}).items()}
     if not names:
-        _remember(f"{key}: no name in any language")
+        _note(sink, f"{key}: no name in any language")
 
     known_roles = labels()["roles"]
     known_materials = labels()["materials"]
@@ -289,28 +330,28 @@ def _wall(entry: dict, locale: str) -> dict | None:
             continue
         thickness = _millimetres(skin.get("thickness"))
         if thickness is None or thickness <= 0:
-            _remember(f"{key}: skin {index + 1} has no readable thickness")
+            _note(sink, f"{key}: skin {index + 1} has no readable thickness")
             continue
         if not MIN_SKIN <= thickness <= MAX_SKIN:
-            _remember(f"{key}: skin {index + 1} is {thickness * 1000:.0f} mm, "
-                      f"outside {MIN_SKIN * 1000:.0f}–{MAX_SKIN * 1000:.0f} mm")
+            _note(sink, f"{key}: skin {index + 1} is {thickness * 1000:.0f} mm, "
+                        f"outside {MIN_SKIN * 1000:.0f}–{MAX_SKIN * 1000:.0f} mm")
             continue
         role = str(skin.get("role") or "").strip()
         if role not in known_roles:
-            _remember(f"{key}: skin {index + 1} has role {role!r}, which is not "
-                      f"in labels.json")
+            _note(sink, f"{key}: skin {index + 1} has role {role!r}, which is "
+                        f"not in labels.json")
         material = str(skin.get("material") or "").strip()
         if material not in known_materials:
-            _remember(f"{key}: skin {index + 1} has material {material!r}, "
-                      f"which is not in labels.json")
+            _note(sink, f"{key}: skin {index + 1} has material {material!r}, "
+                        f"which is not in labels.json")
         skins.append({"role": role, "name": "", "thickness": thickness,
                       "material": material})
     if not skins:
-        _remember(f"{key}: no usable skins, so the wall was skipped")
+        _note(sink, f"{key}: no usable skins, so the wall was skipped")
         return None
     if len(skins) > MAX_SKINS:
-        _remember(f"{key}: {len(skins)} skins, and {MAX_SKINS} is the most the "
-                  f"geometry builds")
+        _note(sink, f"{key}: {len(skins)} skins, and {MAX_SKINS} is the most the "
+                    f"geometry builds")
 
     performance = entry.get("performance") or {}
     return {
@@ -324,11 +365,232 @@ def _wall(entry: dict, locale: str) -> dict | None:
         "checked": str(entry.get("checked") or "").strip(),
         "reviewed": bool(entry.get("reviewed")),
         "note": str(entry.get("note") or "").strip(),
+        "mine": False,
         "performance": {"rc": performance.get("rc"),
                         "u": performance.get("u"),
                         "value_source": performance.get("value_source"),
                         "value_checked": performance.get("value_checked")},
     }
+
+
+# ---- the user's own wall types --------------------------------------------
+#: Where a user's own types are kept. Outside the extension, so updating it
+#: never removes them; and beside what the app calls its own data folder, which
+#: on macOS is the XDG one (see AGENTS.md: the app special-cases only win32).
+#: A test points this at a temporary folder instead.
+USER_HOME: Path | None = None
+
+
+def user_path() -> Path:
+    """The file a user's own wall types are kept in."""
+    home = USER_HOME
+    if home is None:
+        if sys.platform == "win32":
+            base = Path(os.environ.get("APPDATA")
+                        or Path.home() / "AppData" / "Roaming")
+        else:
+            base = Path(os.environ.get("XDG_DATA_HOME")
+                        or Path.home() / ".local" / "share")
+        home = base / "ingetrazo" / "openings" / "walls"
+    return Path(home) / "user.json"
+
+
+def _user_raw() -> dict:
+    """What the user has imported. Missing is normal, so it says nothing."""
+    path = user_path()
+    if not path.is_file():
+        return {"walls": []}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        _remember(f"your own wall types could not be read: {exc}")
+        return {"walls": []}
+    if isinstance(data, list):
+        return {"walls": data}
+    return data if isinstance(data, dict) else {"walls": []}
+
+
+def _user_walls(locale: str) -> tuple[dict, ...]:
+    slot = ("mine", locale)
+    if slot not in _cache:
+        loaded = []
+        for entry in _user_raw().get("walls") or ():
+            if not isinstance(entry, dict):
+                continue
+            if str(entry.get("locale") or locale).strip() != locale:
+                continue
+            wall = _wall(entry, locale)
+            if wall is not None:
+                wall["mine"] = True
+                loaded.append(wall)
+        _cache[slot] = tuple(loaded)
+    return _cache[slot]
+
+
+def _write(path: Path, data) -> Path:
+    """Write beside the target and move it into place: a half-written file that
+    a later load has to survive is not worth the microseconds saved."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+                         encoding="utf-8")
+    os.replace(temporary, path)
+    return path
+
+
+def _same(first: dict, second: dict) -> bool:
+    """Whether two wall entries say exactly the same thing.
+
+    An imported copy carries the library stamp ``_wall`` and ``import`` add;
+    everything else has to match, or it is a wall worth keeping.
+    """
+    return ({k: v for k, v in first.items() if k != "locale"}
+            == {k: v for k, v in second.items() if k != "locale"})
+
+
+#: What an exported file says about itself, at the top.
+EXPORT_NOTE = (
+    "Wall types, from IngeTrazo. Edit this file and import it back: the import "
+    "checks every wall and tells you what it could not read. Thicknesses are "
+    "millimetres, listed from the outside in. A layer names a role "
+    "(outer_leaf, insulation, inner_leaf, …) and a material one of the keys "
+    "the extension ships — Brick, Block, Timber, Insulation, Air, …")
+
+
+def export_library(path, locale: str | None = None,
+                   keys=None) -> dict:
+    """Write one library — the shipped walls and the user's own — to a file.
+
+    The file is a **library file**: the same shape ``data/walls/nl.json`` has,
+    so exporting and importing is one format and one validator, and what is
+    exported can be dropped beside the shipped libraries as they are.
+    """
+    code = _locale(locale)
+    document = _document(code)
+    wanted = None if keys is None else {str(key) for key in keys}
+    entries = []
+    for entry in document.get("walls") or ():
+        if isinstance(entry, dict) and (wanted is None
+                                        or str(entry.get("key")) in wanted):
+            entries.append(entry)
+    for entry in _user_raw().get("walls") or ():
+        if not isinstance(entry, dict):
+            continue
+        if str(entry.get("locale") or code).strip() != code:
+            continue
+        if wanted is not None and str(entry.get("key")) not in wanted:
+            continue
+        entries.append(entry)
+
+    out = {"locale": code,
+           "country": document.get("country") or "",
+           "note": EXPORT_NOTE,
+           "walls": entries}
+    written = _write(Path(path), out)
+    return {"walls": len(entries), "path": str(written), "locale": code}
+
+
+def import_library(path, locale: str | None = None) -> dict:
+    """Add a user's wall types, and say what could not be read.
+
+    A wall is imported **only if it is clean** — every role and material known,
+    every thickness a skin can be, a name and a key — because what lands in the
+    user's file is read on every start. Anything doubtful is skipped and
+    reported with the reason.
+    """
+    path = Path(path)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(data, dict):
+        entries = data.get("walls") or []
+        file_locale = str(data.get("locale") or "").strip()
+    elif isinstance(data, list):
+        entries = data
+        file_locale = ""
+    else:
+        raise ValueError("this file holds neither a list of walls nor an "
+                         "object with a 'walls' list")
+
+    problems: list[str] = []
+    accepted = []
+    legacy: dict = {}
+    shipped: dict = {}
+    for code in {file_locale, locale or ""} - {""}:
+        if not (DATA / f"{code}.json").is_file():
+            continue
+        for entry in _document(code).get("walls") or ():
+            if not isinstance(entry, dict) or not entry.get("key"):
+                continue
+            key = str(entry["key"])
+            shipped.setdefault(key, entry)
+            if entry.get("legacy"):
+                legacy[key] = str(entry["legacy"])
+    for entry in _user_raw().get("walls") or []:
+        if not isinstance(entry, dict) or not entry.get("key"):
+            continue
+        key = str(entry["key"])
+        shipped.setdefault(key, entry)
+        if entry.get("legacy"):
+            legacy[key] = str(entry["legacy"])
+
+    untouched = 0
+    for entry in entries:
+        if not isinstance(entry, dict):
+            problems.append("an entry that is not a wall")
+            continue
+        code = str(entry.get("locale") or file_locale or locale or "").strip()
+        if not code:
+            problems.append(f"{entry.get('key') or 'a wall'}: no library says "
+                            f"which country it belongs to")
+            continue
+        before = len(problems)
+        wall = _wall(entry, code, sink=problems)
+        if wall is None or len(problems) > before:
+            continue
+        stored = dict(entry)
+        stored["locale"] = code
+        # An alias belongs to the key, not to whoever types the file: importing
+        # a corrected cavity wall must not lose the name a document already
+        # cites it by.
+        if not stored.get("legacy") and legacy.get(stored["key"]):
+            stored["legacy"] = legacy[stored["key"]]
+        # A wall that already says exactly this needs no copy in the user's
+        # file — otherwise exporting a library to edit one wall would shadow
+        # every other wall in it for good.
+        if stored["key"] in shipped and _same(stored, shipped[stored["key"]]):
+            untouched += 1
+            continue
+        accepted.append(stored)
+
+    current = _user_raw()
+    order, by_key = [], {}
+    for entry in current.get("walls") or []:
+        if not isinstance(entry, dict) or not entry.get("key"):
+            continue
+        key = str(entry["key"])
+        if key not in by_key:
+            order.append(key)
+        by_key[key] = entry
+    added = updated = 0
+    for entry in accepted:
+        key = str(entry["key"])
+        if key in by_key:
+            updated += 1
+        else:
+            order.append(key)
+            added += 1
+        by_key[key] = entry
+    if accepted:
+        _write(user_path(), {
+            "note": "The wall types you imported, read beside the ones the "
+                    "extension ships. Remove a wall here to go back to the "
+                    "shipped one; remove the file to lose them all.",
+            "walls": [by_key[key] for key in order],
+        })
+    reset()
+    return {"imported": added, "updated": updated, "unchanged": untouched,
+            "skipped": len(entries) - len(accepted) - untouched,
+            "problems": problems, "path": str(user_path())}
 
 
 def wall(key: str, locale: str | None = None) -> dict | None:
