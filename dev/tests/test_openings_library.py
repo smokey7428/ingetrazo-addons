@@ -387,6 +387,29 @@ def test_import_export(library, walls) -> None:
                   for s in library.wall("spouwmuur")["skins"]), 0.340,
               "and the correction is what the library gives")
 
+        # What an export looks like once the user has altered the library: one
+        # wall per key, with their version of it, and their own walls included.
+        own_export = room / "own.json"
+        library.export_library(own_export, "nl")
+        written = __import__("json").loads(own_export.read_text(encoding="utf-8"))
+        keys = [entry["key"] for entry in written["walls"]]
+        equal(len(keys), len(set(keys)),
+              f"the export has one wall per key: {len(keys)} of "
+              f"{len(set(keys))} unique")
+        corrected = next(entry for entry in written["walls"]
+                         if entry["key"] == "nl.spouwmuur.100-100-100")
+        equal([skin["thickness"] for skin in corrected["skins"]
+               if skin["role"] == "insulation"], [140],
+              "and it carries the correction, not the shipped wall")
+        check("nl.mijn.wand.150" in keys,
+              "a wall of the user's own is exported with the rest")
+        equal(len(keys), len(library.walls("nl")),
+              "as many walls as the picker offers")
+        again = library.import_library(own_export)
+        equal([again["imported"], again["updated"], again["unchanged"]],
+              [0, 0, len(keys)],
+              "and importing that export again changes nothing at all")
+
         # A wall we cannot read is refused, with the reason, and nothing is
         # written: what lands in the user's file is read on every start.
         broken = {"locale": "nl", "walls": [{
@@ -405,6 +428,55 @@ def test_import_export(library, walls) -> None:
         library.reset()
         equal(library.wall("nl.kapot.1"), None, "it is not in the library")
         equal(library.problems(), [], "nor did it pollute the report")
+
+        # A claim about sign-off is a boolean or it is a mistake. `"false"` is
+        # a truthy string, and a wall signed off by accident is worse than a
+        # wall refused.
+        sneaky = {"locale": "nl", "walls": [{
+            "key": "nl.sneaky.1", "kind": "interior",
+            "name": {"nl": "Stiekem"}, "reviewed": "false",
+            "skins": [{"role": "inner_leaf", "thickness": 100,
+                       "material": "Block"}]}]}
+        sneaky_file = room / "sneaky.json"
+        sneaky_file.write_text(__import__("json").dumps(sneaky),
+                              encoding="utf-8")
+        refused_review = library.import_library(sneaky_file)
+        equal(refused_review["imported"], 0,
+              "a reviewed flag that is a string is not imported")
+        check(any("reviewed" in problem
+                  for problem in refused_review["problems"]),
+              "and the report says which field it was")
+        library.reset()
+        equal(library.wall("nl.sneaky.1"), None, "and it is not in the library")
+
+        # A file written by a Windows editor starts with a byte-order mark.
+        bom = {"locale": "de", "walls": [{
+            "key": "de.bom.1", "kind": "interior",
+            "name": {"de": "Bom"},
+            "skins": [{"role": "inner_leaf", "thickness": 100,
+                       "material": "LimeSandStone"}]}]}
+        bom_file = room / "bom.json"
+        bom_file.write_bytes(b"\xef\xbb\xbf"
+                             + __import__("json").dumps(bom).encode("utf-8"))
+        from_bom = library.import_library(bom_file)
+        equal([from_bom["imported"], from_bom["problems"]], [1, []],
+              "a file with a byte-order mark imports like any other")
+        equal(from_bom["locales"], ["de"],
+              "and the import says which library it was for")
+        library.reset()
+        check(library.wall("de.bom.1") is not None,
+              "and the German wall is there, in the German library")
+
+        # Exporting a library that does not exist must say so — falling back
+        # would write the Dutch walls under somebody else's file name.
+        raised = False
+        try:
+            library.export_library(room / "nope.json", "en-US")
+        except ValueError:
+            raised = True
+        check(raised, "exporting a library that does not exist is refused")
+        check(not (room / "nope.json").is_file(),
+              "and nothing is written under the wrong name")
 
         # Something that is not a library at all.
         other = room / "not.json"

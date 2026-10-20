@@ -114,8 +114,10 @@ def reset() -> None:
 
 
 def _read(path: Path, default):
+    # ``utf-8-sig``: a file edited in Notepad or Excel starts with a byte-order
+    # mark, and a BOM must not be the reason a wall library will not load.
     try:
-        with path.open("r", encoding="utf-8") as handle:
+        with path.open("r", encoding="utf-8-sig") as handle:
             return json.load(handle)
     except FileNotFoundError:
         _remember(f"{path.name} is missing from data/walls")
@@ -355,6 +357,13 @@ def _wall(entry: dict, locale: str, sink: list | None = None) -> dict | None:
         _note(sink, f"{key}: {len(skins)} skins, and {MAX_SKINS} is the most the "
                     f"geometry builds")
 
+    reviewed = entry.get("reviewed", False)
+    if not isinstance(reviewed, bool):
+        # ``bool("false")`` is True. A string here would silently sign a wall
+        # off, which is the one thing this flag exists to prevent.
+        _note(sink, f"{key}: reviewed must be true or false, got {reviewed!r}")
+        reviewed = False
+
     performance = entry.get("performance") or {}
     return {
         "key": key,
@@ -365,7 +374,7 @@ def _wall(entry: dict, locale: str, sink: list | None = None) -> dict | None:
         "skins": skins[:MAX_SKINS],
         "source": str(entry.get("source") or "").strip(),
         "checked": str(entry.get("checked") or "").strip(),
-        "reviewed": bool(entry.get("reviewed")),
+        "reviewed": reviewed,
         "note": str(entry.get("note") or "").strip(),
         "mine": False,
         "performance": {"rc": performance.get("rc"),
@@ -403,7 +412,7 @@ def _user_raw() -> dict:
     if not path.is_file():
         return {"walls": []}
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError) as exc:
         _remember(f"your own wall types could not be read: {exc}")
         return {"walls": []}
@@ -457,7 +466,9 @@ EXPORT_NOTE = (
     "checks every wall and tells you what it could not read. Thicknesses are "
     "millimetres, listed from the outside in. A layer names a role "
     "(outer_leaf, insulation, inner_leaf, …) and a material one of the keys "
-    "the extension ships — Brick, Block, Timber, Insulation, Air, …")
+    "the extension ships — Brick, Block, Timber, Insulation, Air, …  "
+    "\"reviewed\": true means a person has checked the build-up; leave it "
+    "false for anything you have not.")
 
 
 def export_library(path, locale: str | None = None,
@@ -468,20 +479,32 @@ def export_library(path, locale: str | None = None,
     so exporting and importing is one format and one validator, and what is
     exported can be dropped beside the shipped libraries as they are.
     """
+    if locale is not None and str(locale) not in languages():
+        # Falling back would write the Dutch walls under a German file name.
+        raise ValueError(f"there is no {locale} wall library to export")
     code = _locale(locale)
     document = _document(code)
     wanted = None if keys is None else {str(key) for key in keys}
-    entries = []
-    for entry in document.get("walls") or ():
-        if isinstance(entry, dict) and (wanted is None
-                                        or str(entry.get("key")) in wanted):
-            entries.append(entry)
+    own = {}
     for entry in _user_raw().get("walls") or ():
-        if not isinstance(entry, dict):
+        if not isinstance(entry, dict) or not entry.get("key"):
             continue
         if str(entry.get("locale") or code).strip() != code:
             continue
-        if wanted is not None and str(entry.get("key")) not in wanted:
+        own[str(entry["key"])] = entry
+
+    entries = []
+    for entry in document.get("walls") or ():
+        if not isinstance(entry, dict):
+            continue
+        key = str(entry.get("key"))
+        if wanted is not None and key not in wanted:
+            continue
+        # A wall the user corrected **replaces** the shipped one, exactly as the
+        # picker shows it: one wall per key, in the shipped order, never two.
+        entries.append(own.pop(key, entry))
+    for key, entry in own.items():
+        if wanted is not None and key not in wanted:
             continue
         entries.append(entry)
 
@@ -502,7 +525,7 @@ def import_library(path, locale: str | None = None) -> dict:
     reported with the reason.
     """
     path = Path(path)
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8-sig"))
     if isinstance(data, dict):
         entries = data.get("walls") or []
         file_locale = str(data.get("locale") or "").strip()
@@ -517,6 +540,7 @@ def import_library(path, locale: str | None = None) -> dict:
     accepted = []
     legacy: dict = {}
     shipped: dict = {}
+    mine: dict = {}
     for code in {file_locale, locale or ""} - {""}:
         if not (DATA / f"{code}.json").is_file():
             continue
@@ -531,7 +555,7 @@ def import_library(path, locale: str | None = None) -> dict:
         if not isinstance(entry, dict) or not entry.get("key"):
             continue
         key = str(entry["key"])
-        shipped.setdefault(key, entry)
+        mine[key] = entry
         if entry.get("legacy"):
             legacy[key] = str(entry["legacy"])
 
@@ -558,8 +582,10 @@ def import_library(path, locale: str | None = None) -> dict:
             stored["legacy"] = legacy[stored["key"]]
         # A wall that already says exactly this needs no copy in the user's
         # file — otherwise exporting a library to edit one wall would shadow
-        # every other wall in it for good.
-        if stored["key"] in shipped and _same(stored, shipped[stored["key"]]):
+        # every other wall in it for good. The user's own copy is checked
+        # first: importing a file one has already imported is not a change.
+        known = mine.get(stored["key"]) or shipped.get(stored["key"])
+        if known is not None and _same(stored, known):
             untouched += 1
             continue
         accepted.append(stored)
@@ -592,6 +618,7 @@ def import_library(path, locale: str | None = None) -> dict:
     reset()
     return {"imported": added, "updated": updated, "unchanged": untouched,
             "skipped": len(entries) - len(accepted) - untouched,
+            "locales": sorted({str(entry["locale"]) for entry in accepted}),
             "problems": problems, "path": str(user_path())}
 
 

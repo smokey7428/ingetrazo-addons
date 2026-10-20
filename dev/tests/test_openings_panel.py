@@ -469,6 +469,64 @@ def main() -> int:
     equal(walls_panel._type.findData("nl.kantoor.100"), -1,
           "and once the file is gone, so is the wall")
 
+    # ---- import and export, through the menu, with a real file ----
+    # The generic loop above cancels every dialog; here one is answered, so the
+    # whole path runs: menu entry, file dialog, file, library, picker.
+    room = Path(tempfile.mkdtemp(prefix="ingetrazo-walls-menu-"))
+    keep = library.USER_HOME
+    library.USER_HOME = room / "user"
+    exported = room / "dutch.json"
+    try:
+        def menu_entry(prefix):
+            for menu in app.menus:
+                if isinstance(menu, tuple):
+                    continue
+                for text, call in menu.actions:
+                    if text.startswith(prefix):
+                        return call
+            return None
+
+        export = menu_entry("Export wall types")
+        check(export is not None, "the extension menu offers an export")
+        qt_stubs.QFileDialog.next_path = str(exported)
+        export()
+        check(exported.is_file(), "and it wrote the file the dialog chose")
+        written = json.loads(exported.read_text(encoding="utf-8"))
+        here = walls_panel.library_code()
+        equal(len(written["walls"]), len(library.walls(here)),
+              "with every wall of the library the panel is showing")
+        equal(written["locale"], here, "and it says which library it is")
+
+        # The same file back in: nothing new, nothing lost.
+        before = len(library.walls(here))
+        come_back = menu_entry("Import wall types")
+        check(come_back is not None, "and an import to match it")
+        qt_stubs.QFileDialog.next_path = str(exported)
+        come_back()
+        equal(len(library.walls(here)), before,
+              "importing what was exported adds no duplicate")
+        equal(library.problems(), [], "and leaves no complaint behind")
+
+        # Walls for a country the panel is not showing: it follows them.
+        germans = {"locale": "de", "walls": [{
+            "key": "de.keller.200", "kind": "interior",
+            "name": {"de": "Kellerwand 200", "en-GB": "Cellar wall 200"},
+            "skins": [{"role": "structure", "thickness": 200,
+                       "material": "Concrete"}]}]}
+        german_file = room / "german.json"
+        german_file.write_text(json.dumps(germans), encoding="utf-8")
+        qt_stubs.QFileDialog.next_path = str(german_file)
+        come_back()
+        equal(walls_panel.library_code(), "de",
+              "an import for another library switches the panel to it")
+        equal(walls_panel._type.findData("de.keller.200") >= 0, True,
+              "so the imported wall is visible, not merely counted")
+    finally:
+        qt_stubs.QFileDialog.next_path = None
+        library.USER_HOME = keep
+        library.reset()
+        shutil.rmtree(room, ignore_errors=True)
+
     # ---- nothing selected: the panel is the next door's settings ----
     panel.refresh()
     check("nothing selected" in panel._status.text().lower()

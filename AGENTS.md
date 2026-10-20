@@ -437,11 +437,11 @@ its symbol behind — hence a "Refresh plan symbols" command.
 Coordinates: **x** along the wall (0 at the left jamb), **y** into the wall
 (0 on the clicked face), **z** up (0 on the floor).
 
-Tests: **2438 checks** in `test_openings_library.py` (the data: every wall's
+Tests: **2450 checks** in `test_openings_library.py` (the data: every wall's
 roles and materials resolve in all five languages, the units change in one
 place, a stored "Buitenblad" recovers its role, nothing drafted is sold as
 reviewed, and an export→edit→import round trip changes nothing it should not),
-plus **557** across `test_openings_geometry.py`, `test_openings_object.py`,
+plus **565** across `test_openings_geometry.py`, `test_openings_object.py`,
 `test_openings_panel.py` and `test_openings_walls.py`. They prove
 each part is a closed solid with a **positive volume** — the same test
 `core/bim.py` uses before it will report a volume — that the volumes match the
@@ -990,6 +990,18 @@ classification data to a user should name buildingSMART.
   different copies of it**, and therefore different caches: the panel kept
   showing the library it had loaded before the test changed it. One module per
   file, as in the app — `load()` returns `sys.modules[...]` when it is there.
+* **`bool("false")` is `True`.** A hand-edited `"reviewed": "false"` signed a
+  wall off — the one thing the flag exists to prevent. `_wall` now accepts a
+  real boolean or refuses the entry with a message, and an import is the
+  validator, so the person who typed it is the one told.
+* **An export must hold one wall per key.** A corrected wall is a user entry
+  with a shipped key, and writing both put the same key in the file twice. The
+  user's copy replaces the shipped one in place — same order, one wall, the
+  correction. And an import compares against the user's copy *before* the
+  shipped one, or re-importing an export reports a change that did not happen.
+* **A file edited by a person may carry a byte-order mark.** Notepad and Excel
+  write one; `utf-8-sig` costs nothing and a BOM must not be the reason a
+  library will not load.
 * A stub that is *wrong* hides real bugs as effectively as real code: the
   class-change rebuild looked broken until `takeAt` was stubbed to Qt's shape,
   and a no-op `narrow()` in the stub hid that it shrinks a button to a 40 px

@@ -60,6 +60,10 @@ _TEXTS = {
             "{new} nuevos, {updated} actualizados, {known} ya conocidos.",
         "{n} wall type(s) written to {path}":
             "{n} tipos de muro escritos en {path}",
+        "The panel now shows the {code} library.":
+            "El panel muestra ahora la biblioteca {code}.",
+        "{code} of them belong to another library.":
+            "{code} de ellos pertenecen a otra biblioteca.",
         "Plan, elevation and 3D scenes, showing the door symbols where they "
         "belong.":
             "Escenas de planta, alzado y 3D, con los símbolos de las puertas "
@@ -240,10 +244,22 @@ def _import_walls(app, panel) -> None:
     except (OSError, ValueError) as failure:
         _say(app, _t("That file could not be read: {e}", e=failure), True)
         return
+    panel.reload_libraries()
     panel.reload_types()
+    codes = result.get("locales") or []
+    here = panel.library_code()
+    elsewhere = [code for code in codes if code != here]
     summary = _t("{new} new, {updated} updated, {known} already known.",
                  new=result["imported"], updated=result["updated"],
                  known=result["unchanged"])
+    if elsewhere and here not in codes:
+        # Every wall in that file belongs to another country: show them.
+        panel.show_library(elsewhere[0])
+        summary += "\n" + _t("The panel now shows the {code} library.",
+                             code=elsewhere[0])
+    elif elsewhere:
+        summary += "\n" + _t("{code} of them belong to another library.",
+                             code=", ".join(elsewhere))
     if result["problems"]:
         _say(app, summary + "\n\n" + _t("Not imported:") + "\n"
              + "\n".join(f"· {problem}" for problem in result["problems"][:20]),

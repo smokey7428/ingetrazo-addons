@@ -142,14 +142,11 @@ class WallsPanel(QWidget):
         row = QHBoxLayout()
         row.addWidget(QLabel(_t("Library") + ":"))
         self._library_box = QComboBox()
-        for code in codes:
-            self._library_box.addItem(code, code)
-        self._library_box.setCurrentIndex(
-            max(0, self._library_box.findData(self._library)))
         self._library_box.currentIndexChanged.connect(self._on_library)
         row.addWidget(self._library_box, 1)
         outer.addLayout(row)
         narrow(self._library_box)
+        self._fill_libraries()
 
         row = QHBoxLayout()
         row.addWidget(QLabel(_t("Search") + ":"))
@@ -218,6 +215,42 @@ class WallsPanel(QWidget):
     def language_code(self) -> str:
         """Which language the panel is naming them in."""
         return self._language
+
+    def _fill_libraries(self) -> None:
+        """What the library box offers.
+
+        Rebuilt rather than filled once, because a library can **arrive while
+        the app is running**: an import adds walls for a country that had none,
+        and the design says a sixth library is a file and nothing else — not a
+        restart.
+        """
+        codes = library.languages() or ("nl",)
+        if self._library not in codes:
+            self._library = codes[0]
+        self._library_box.blockSignals(True)
+        try:
+            self._library_box.clear()
+            for code in codes:
+                self._library_box.addItem(code, code)
+            self._library_box.setCurrentIndex(
+                max(0, self._library_box.findData(self._library)))
+        finally:
+            self._library_box.blockSignals(False)
+
+    def reload_libraries(self) -> None:
+        """Ask again which countries have walls. For after an import."""
+        self._fill_libraries()
+
+    def show_library(self, code: str) -> None:
+        """Offer another country's walls.
+
+        An import of German walls into a panel showing the Dutch ones should
+        show them, rather than count them and leave them invisible.
+        """
+        index = self._library_box.findData(code)
+        if index >= 0 and index != self._library_box.currentIndex():
+            self._library_box.setCurrentIndex(index)
+            self._library_box.currentIndexChanged.emit(index)
 
     def reload_types(self, keep: str | None = None) -> None:
         """Offer the walls of the chosen library, filtered by the search box.

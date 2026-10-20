@@ -529,13 +529,21 @@ class QFileDialog:
     raising — the check that caught a ``NameError`` in this very extension.
     """
 
+    #: Set this to a path and the dialog "chooses" it. Left alone, every dialog
+    #: is cancelled, which is what a run of the menu entries wants.
+    next_path = None
+
+    @staticmethod
+    def _answer():
+        return (QFileDialog.next_path or "", "")
+
     @staticmethod
     def getSaveFileName(*_args, **_kwargs):
-        return ("", "")
+        return QFileDialog._answer()
 
     @staticmethod
     def getOpenFileName(*_args, **_kwargs):
-        return ("", "")
+        return QFileDialog._answer()
 
 
 class QMessageBox(QWidget):
